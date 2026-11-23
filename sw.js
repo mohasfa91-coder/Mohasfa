@@ -1,12 +1,15 @@
 /* NeuroSpine Calculator service worker: offline support.
    © 2026 Dr. Mohammed Asfa. All rights reserved.
    Change CACHE when you publish a new version so phones fetch the update. */
-var CACHE = "nss-v7";
-var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png"];
+var CACHE = "nss-v10";
+var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE).then(function (cache) { return cache.addAll(CORE); }).then(function () { return self.skipWaiting(); })
+    caches.open(CACHE).then(function (cache) {
+      // Cache each file on its own, so one missing file never blocks the update.
+      return Promise.all(CORE.map(function (u) { return cache.add(u).catch(function () {}); }));
+    }).then(function () { return self.skipWaiting(); })
   );
 });
 

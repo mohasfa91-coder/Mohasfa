@@ -2,7 +2,7 @@
   "id": "./",
   "name": "NeuroSpine Calculator",
   "short_name": "NeuroSpine Calculator",
-  "description": "91 neurosurgery, neurology and psychiatry scores and calculators for clinicians, with original references. Works offline.",
+  "description": "91 neurosurgery, neurology and psychiatry scores and calculators, plus 520 ICD-10 and ICD-9 codes for neurosurgery and spine. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
