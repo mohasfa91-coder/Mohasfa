@@ -1,10 +1,18 @@
 <!DOCTYPE html>
+<!--
+  NeuroSpine Calculator
+  © 2026 Dr. Mohammed Asfa. All rights reserved.
+  The code and design of this app may not be copied, modified or republished without written permission.
+  The clinical scores and classifications belong to their original authors and are cited in each calculator.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b6e66">
 <meta name="description" content="Neurosurgery, neurology and psychiatry scores and calculators for clinicians.">
+<meta name="author" content="Dr. Mohammed Asfa">
+<meta name="copyright" content="© 2026 Dr. Mohammed Asfa. All rights reserved.">
 <title>NeuroSpine Calculator</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -157,6 +165,8 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 .row .chev { color: var(--muted); flex: none; }
 .empty { color: var(--muted); padding: 18px 2px; }
 .foot { color: var(--muted); font-size: 12.5px; margin-top: 26px; line-height: 1.5; }
+.copy { margin-top: 10px; font-size: 12px; }
+.copy strong { color: var(--ink); font-weight: 600; }
 
 /* ---------- calculator ---------- */
 .intro { margin: 14px 0 0; color: var(--muted); font-size: 14.5px; }
@@ -2326,6 +2336,7 @@ if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, 
     });
     if (!shown) html += '<p class="empty">No score matches “' + esc(query) + '”' + (field !== "All" ? ' in ' + esc(field) : '') + '.</p>';
     html += '<p class="foot">' + CALCS.length + ' scores. Each calculator lists its original references. Check results against your local protocols.</p>';
+    html += '<p class="foot copy"><strong>© 2026 Dr. Mohammed Asfa.</strong> All rights reserved. The scores and classifications belong to their original authors and are cited in each calculator.</p>';
     app.innerHTML = html;
     document.getElementById("result") && document.getElementById("result").remove();
     var qi = document.getElementById("q");
@@ -2427,6 +2438,7 @@ if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, 
     html += '</div>';
     if (c.notes && c.notes.length) html += '<section class="block"><h2>Notes</h2><ul>' + c.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join("") + '</ul></section>';
     if (c.refs && c.refs.length) html += '<section class="block"><h2>References</h2><ul>' + c.refs.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join("") + '</ul></section>';
+    html += '<p class="foot copy">© 2026 Dr. Mohammed Asfa. All rights reserved.</p>';
     html += '<div class="spacer"></div>';
     app.innerHTML = html;
 
