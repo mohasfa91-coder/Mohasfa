@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "NeuroSpine Scores",
+  "short_name": "NeuroSpine",
+  "description": "91 neurosurgery, neurology and psychiatry scores and calculators for clinicians, with original references. Works offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f5f5",
+  "theme_color": "#0b6e66",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["medical", "education", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "screenshot-1.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "All scores by specialty" },
+    { "src": "screenshot-2.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "TL AOSIS with live result" },
+    { "src": "screenshot-3.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "NIH Stroke Scale" }
+  ]
+}

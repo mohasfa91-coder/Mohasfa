@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b6e66">
+<meta name="description" content="Neurosurgery, neurology and psychiatry scores and calculators for clinicians.">
+<title>NeuroSpine Scores</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one narrow app column; list of scores, then a calculator with tap-to-answer option rows and a live result bar pinned to the bottom. */
+:root {
+  --bg: #f2f5f5;
+  --surface: #ffffff;
+  --ink: #13201f;
+  --muted: #586967;
+  --line: #d5dedd;
+  --accent: #0b6e66;
+  --accent-ink: #ffffff;
+  --accent-soft: #e0f0ee;
+  --ok: #2e7d32;
+  --warn: #a35f00;
+  --crit: #b3261e;
+  --info: #35598f;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1515;
+    --surface: #162120;
+    --ink: #e4eceb;
+    --muted: #97a8a6;
+    --line: #293836;
+    --accent: #4cbfb2;
+    --accent-ink: #062320;
+    --accent-soft: #143331;
+    --ok: #74c47a;
+    --warn: #e3a64a;
+    --crit: #f07068;
+    --info: #8eaee0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1515;
+  --surface: #162120;
+  --ink: #e4eceb;
+  --muted: #97a8a6;
+  --line: #293836;
+  --accent: #4cbfb2;
+  --accent-ink: #062320;
+  --accent-soft: #143331;
+  --ok: #74c47a;
+  --warn: #e3a64a;
+  --crit: #f07068;
+  --info: #8eaee0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+
+.app { max-width: 640px; margin: 0 auto; padding: 0 16px 24px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--bg);
+  padding: 14px 0 10px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.brand h1 { font-size: 24px; letter-spacing: .2px; }
+.brand p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.mark {
+  width: 36px; height: 36px; border-radius: 9px; flex: none;
+  background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: .5px;
+}
+.iconbtn {
+  flex: none; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 9px; height: 38px; min-width: 38px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 14px; font-weight: 500;
+  color: var(--ink); text-decoration: none;
+}
+.iconbtn svg { width: 18px; height: 18px; }
+.iconbtn[aria-pressed="true"] { color: var(--warn); border-color: var(--warn); }
+.calc-title { flex: 1; min-width: 0; }
+.calc-title h1 { font-size: 21px; line-height: 1.15; }
+.calc-title p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+/* ---------- home ---------- */
+.notice {
+  margin: 14px 0 0; padding: 12px 14px; border-radius: var(--radius);
+  background: var(--accent-soft); border: 1px solid var(--line);
+  display: flex; gap: 12px; align-items: flex-start; font-size: 14px;
+}
+.notice p { margin: 0; flex: 1; }
+.notice button {
+  border: 0; background: var(--accent); color: var(--accent-ink);
+  border-radius: 8px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; flex: none;
+}
+.search { margin: 14px 0 4px; position: relative; }
+.search input {
+  width: 100%; height: 46px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--surface);
+  padding: 0 14px 0 40px; font-size: 16px;
+}
+.search svg { position: absolute; left: 13px; top: 14px; width: 18px; height: 18px; color: var(--muted); }
+.group { margin-top: 20px; }
+.group h2 {
+  font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--muted); font-family: var(--font-body); font-weight: 600; margin: 0 0 8px 2px;
+}
+.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; text-decoration: none; color: inherit;
+  border-top: 1px solid var(--line);
+}
+.row:first-child { border-top: 0; }
+.row:hover { background: var(--accent-soft); }
+.row .abbr {
+  flex: none; width: 54px; height: 34px; border-radius: 7px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; text-align: center; line-height: 1.1;
+}
+.row .txt { flex: 1; min-width: 0; }
+.row .name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.row .name .star { color: var(--warn); font-size: 13px; }
+.row .desc { color: var(--muted); font-size: 13.5px; }
+.row .chev { color: var(--muted); flex: none; }
+.empty { color: var(--muted); padding: 18px 2px; }
+.foot { color: var(--muted); font-size: 12.5px; margin-top: 26px; line-height: 1.5; }
+
+/* ---------- calculator ---------- */
+.intro { margin: 14px 0 0; color: var(--muted); font-size: 14.5px; }
+.items { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.item {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 12px 10px;
+}
+.item.skipped { opacity: .5; }
+.item-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 2px 8px; }
+.item-head h3 { font-size: 17px; }
+.item-head .tag { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.item .hint { margin: -4px 2px 8px; font-size: 13px; color: var(--muted); }
+.opts { display: flex; flex-direction: column; gap: 6px; }
+.opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 10px; min-height: 44px;
+}
+.opt .dot {
+  flex: none; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--muted); position: relative;
+}
+.opt.check .dot { border-radius: 5px; }
+.opt .otext { flex: 1; min-width: 0; }
+.opt .olabel { font-weight: 500; font-size: 15px; }
+.opt .osub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.opt .pts {
+  flex: none; font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  color: var(--muted); min-width: 30px; text-align: right; font-variant-numeric: tabular-nums;
+}
+.opt[aria-checked="true"], .opt[aria-pressed="true"] {
+  border-color: var(--accent); background: var(--accent-soft);
+}
+.opt[aria-checked="true"] .dot, .opt[aria-pressed="true"] .dot { border-color: var(--accent); }
+.opt[aria-checked="true"] .dot::after, .opt[aria-pressed="true"] .dot::after {
+  content: ""; position: absolute; inset: 3px; border-radius: inherit; background: var(--accent);
+}
+.opt[aria-checked="true"] .pts, .opt[aria-pressed="true"] .pts { color: var(--accent); }
+.opt:disabled { cursor: default; }
+
+.helper {
+  margin-top: 10px; padding: 10px; border-radius: 8px;
+  border: 1px dashed var(--line);
+}
+.helper h4 { margin: 0 0 6px; font-size: 14px; font-family: var(--font-body); font-weight: 600; }
+.helper .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.helper label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--muted); }
+.helper input {
+  height: 40px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface);
+  padding: 0 8px; font-family: var(--font-mono); font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.helper .out { margin-top: 8px; font-size: 14px; }
+.helper .out strong { font-family: var(--font-mono); }
+.helper .small { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.block { margin-top: 18px; }
+.block h2 { font-size: 15px; margin: 0 0 6px 2px; }
+.block ul { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--muted); }
+.block li + li { margin-top: 4px; }
+
+.spacer { height: 150px; }
+
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 6px 12px; font-size: 14px; font-weight: 500;
+}
+.chip span { color: var(--muted); font-family: var(--font-mono); font-size: 12px; margin-left: 2px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed="true"] span { color: var(--accent-ink); opacity: .85; }
+.fieldhead { font-size: 20px; margin: 26px 2px -8px; }
+.legend { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.legend strong { color: var(--ink); font-weight: 600; }
+.seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)); gap: 5px; }
+.segbtn {
+  height: 42px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg);
+  font-family: var(--font-mono); font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.segbtn[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.segbtn:disabled { cursor: default; }
+.segsel { margin: 6px 2px 0; font-size: 13.5px; }
+.segsel span { color: var(--muted); }
+.nums { margin-top: 0; border-style: solid; }
+.helper .fields.fields-2 { grid-template-columns: 1fr 1fr; }
+
+/* ---------- result bar ---------- */
+.result {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.result-in {
+  pointer-events: auto;
+  max-width: 616px; margin: 0 auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  display: flex; overflow: hidden;
+}
+.stripe { width: 6px; flex: none; background: var(--line); }
+.result[data-level="ok"] .stripe { background: var(--ok); }
+.result[data-level="warn"] .stripe { background: var(--warn); }
+.result[data-level="crit"] .stripe { background: var(--crit); }
+.result[data-level="info"] .stripe { background: var(--info); }
+.res-body { flex: 1; min-width: 0; padding: 10px 12px; display: flex; gap: 12px; align-items: center; }
+.res-score {
+  flex: none; min-width: 52px; text-align: center;
+  font-family: var(--font-mono); font-weight: 600; font-size: 28px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.res-score small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-top: 4px; font-family: var(--font-body); }
+.res-text { flex: 1; min-width: 0; }
+.res-label { font-weight: 600; font-size: 15px; }
+.result[data-level="ok"] .res-label { color: var(--ok); }
+.result[data-level="warn"] .res-label { color: var(--warn); }
+.result[data-level="crit"] .res-label { color: var(--crit); }
+.result[data-level="info"] .res-label { color: var(--info); }
+.res-detail { font-size: 13px; color: var(--muted); margin-top: 1px; }
+.res-actions { display: flex; flex-direction: column; gap: 6px; padding: 8px 8px 8px 0; justify-content: center; }
+.res-actions button {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 7px;
+  font-size: 12.5px; font-weight: 600; padding: 5px 10px;
+}
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 120px; z-index: 7;
+  background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px;
+  opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+@media (max-width: 380px) {
+  .res-score { font-size: 24px; min-width: 44px; }
+  .helper .fields { grid-template-columns: 1fr 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="calc-defs">
+/* ===== Score definitions (pure data + pure functions; tested separately) ===== */
+var opt = function (v, label, pts, sub) { return { v: v, label: label, pts: pts, sub: sub }; };
+var YES_NO = [opt("no", "No"), opt("yes", "Yes")];
+var roman = ["0", "I", "II", "III", "IV", "V", "VI"];
+function sumPts(calc, ans, ids) {
+  var t = 0;
+  ids.forEach(function (id) {
+    var item = calc.items.find(function (i) { return i.id === id; });
+    var o = item.options.find(function (x) { return x.v === ans[id]; });
+    t += (typeof o.pts === "number" ? o.pts : 0);
+  });
+  return t;
+}
+function missing(ans, ids) { return ids.filter(function (id) { return ans[id] === undefined; }).length; }
+
+var CALCS = [
+/* ---------------- HEAD INJURY ---------------- */
+{
+  id: "gcs", abbr: "GCS", name: "Glasgow Coma Scale + GCS‑P", cat: "Head injury & coma",
+  desc: "Level of consciousness, with optional pupil reactivity",
+  keywords: "coma consciousness pupils gcs-p tbi",
+  intro: "Record the best response in each component. Add pupil reactivity to get GCS-P.",
+  items: [
+    { id: "e", label: "Eye opening", options: [
+      opt(4, "Spontaneous", 4), opt(3, "To sound", 3), opt(2, "To pressure", 2), opt(1, "None", 1),
+      opt("NT", "Not testable", null, "e.g., eyes closed by swelling")] },
+    { id: "v", label: "Verbal response", options: [
+      opt(5, "Oriented", 5), opt(4, "Confused", 4), opt(3, "Words", 3, "inappropriate words"),
+      opt(2, "Sounds", 2, "incomprehensible sounds"), opt(1, "None", 1),
+      opt("NT", "Not testable", null, "e.g., intubated")] },
+    { id: "m", label: "Best motor response", options: [
+      opt(6, "Obeys commands", 6), opt(5, "Localising", 5), opt(4, "Normal flexion", 4, "withdrawal"),
+      opt(3, "Abnormal flexion", 3, "decorticate"), opt(2, "Extension", 2, "decerebrate"), opt(1, "None", 1),
+      opt("NT", "Not testable", null, "e.g., paralysed or sedated")] },
+    { id: "p", label: "Pupil reactivity", tag: "optional, for GCS-P", options: [
+      opt(0, "Both pupils react to light", -0), opt(1, "One pupil unreactive", -1), opt(2, "Both pupils unreactive", -2)] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["e", "v", "m"]);
+    if (n) return { complete: false, remaining: n };
+    var comp = "E" + a.e + " V" + a.v + " M" + a.m;
+    if (a.e === "NT" || a.v === "NT" || a.m === "NT") {
+      return { complete: true, score: "—", unit: "GCS", level: "info",
+        label: "Total cannot be summed", detail: "Report the components: " + comp,
+        summary: "GCS not summable (" + comp + ")" };
+    }
+    var t = a.e + a.v + a.m;
+    var sev = t >= 13 ? ["Mild (13–15)", "ok"] : t >= 9 ? ["Moderate (9–12)", "warn"] : ["Severe (3–8)", "crit"];
+    var detail = comp;
+    var summary = "GCS " + t + " (" + comp + "), " + sev[0].split(" ")[0].toLowerCase();
+    if (a.p !== undefined) {
+      var gp = t - a.p;
+      detail += " · GCS-P " + gp;
+      summary += "; GCS-P " + gp;
+    }
+    return { complete: true, score: t, unit: "GCS", label: sev[0], level: sev[1], detail: detail, summary: summary };
+  },
+  notes: [
+    "Severity bands (mild 13–15, moderate 9–12, severe 3–8) apply to head injury.",
+    "GCS-P = GCS total minus the pupil reactivity score (0, 1 or 2); range 1–15.",
+    "When a component cannot be tested, report it as NT rather than guessing a number."
+  ],
+  refs: [
+    "Teasdale G, Jennett B. Assessment of coma and impaired consciousness. Lancet 1974;2:81–84.",
+    "Brennan PM, Murray GD, Teasdale GM. Simplifying the use of prognostic information in traumatic brain injury (GCS-Pupils). J Neurosurg 2018;128:1612–1620."
+  ]
+},
+{
+  id: "marshall", abbr: "MAR", name: "Marshall CT classification", cat: "Head injury & coma",
+  desc: "CT category in traumatic brain injury",
+  keywords: "ct tbi head injury midline shift cisterns mass lesion",
+  intro: "Answer from the top. Each question is needed only if the one above is No.",
+  items: [
+    { id: "evac", label: "Mass lesion surgically evacuated?", options: YES_NO },
+    { id: "mass", label: "High- or mixed-density lesion > 25 mL, not evacuated?", options: YES_NO,
+      when: function (a) { return a.evac === "no"; } },
+    { id: "mls", label: "Midline shift > 5 mm?", options: YES_NO,
+      when: function (a) { return a.evac === "no" && a.mass === "no"; } },
+    { id: "cis", label: "Basal cisterns compressed or absent?", options: YES_NO,
+      when: function (a) { return a.evac === "no" && a.mass === "no" && a.mls === "no"; } },
+    { id: "path", label: "Any visible intracranial pathology?", hint: "Includes small lesions, bone fragments and foreign bodies.", options: YES_NO,
+      when: function (a) { return a.evac === "no" && a.mass === "no" && a.mls === "no" && a.cis === "no"; } }
+  ],
+  compute: function (a) {
+    var r = null;
+    if (a.evac === "yes") r = ["V", "Evacuated mass lesion", "warn"];
+    else if (a.evac === "no" && a.mass === "yes") r = ["VI", "Non-evacuated mass lesion > 25 mL", "crit"];
+    else if (a.mass === "no" && a.mls === "yes") r = ["IV", "Diffuse injury IV (shift)", "crit"];
+    else if (a.mls === "no" && a.cis === "yes") r = ["III", "Diffuse injury III (swelling)", "warn"];
+    else if (a.cis === "no" && a.path === "yes") r = ["II", "Diffuse injury II", "info"];
+    else if (a.cis === "no" && a.path === "no") r = ["I", "Diffuse injury I", "ok"];
+    if (!r) return { complete: false, remaining: 1 };
+    var details = {
+      I: "No visible intracranial pathology",
+      II: "Cisterns present, shift 0–5 mm, no high/mixed lesion > 25 mL",
+      III: "Cisterns compressed or absent, shift 0–5 mm, no lesion > 25 mL",
+      IV: "Shift > 5 mm, no high/mixed lesion > 25 mL",
+      V: "Any lesion surgically evacuated",
+      VI: "High or mixed density lesion > 25 mL, not evacuated"
+    };
+    return { complete: true, score: r[0], unit: "Marshall", label: r[1], level: r[2], detail: details[r[0]],
+      summary: "Marshall CT category " + r[0] + ": " + r[1] };
+  },
+  notes: ["Categories V and VI take priority over the diffuse injury categories."],
+  refs: ["Marshall LF, Marshall SB, Klauber MR, et al. A new classification of head injury based on computerized tomography. J Neurosurg 1991;75:S14–S20."]
+},
+
+/* ---------------- CEREBROVASCULAR ---------------- */
+{
+  id: "ich", abbr: "ICH", name: "ICH score", cat: "Cerebrovascular",
+  desc: "30-day mortality in spontaneous intracerebral haemorrhage",
+  keywords: "intracerebral hemorrhage haemorrhage abc/2 volume mortality hemphill",
+  intro: "Use the GCS on presentation and the initial CT. The ABC/2 helper fills the volume item for you.",
+  items: [
+    { id: "gcs", label: "GCS", options: [opt("13-15", "13–15", 0), opt("5-12", "5–12", 1), opt("3-4", "3–4", 2)] },
+    { id: "vol", label: "ICH volume", helper: "abc2", options: [opt("lt30", "< 30 mL", 0), opt("ge30", "≥ 30 mL", 1)] },
+    { id: "ivh", label: "Intraventricular extension", options: [opt("no", "No", 0), opt("yes", "Yes", 1)] },
+    { id: "infra", label: "Origin", options: [opt("supra", "Supratentorial", 0), opt("infra", "Infratentorial", 1)] },
+    { id: "age", label: "Age", options: [opt("lt80", "< 80 years", 0), opt("ge80", "≥ 80 years", 1)] }
+  ],
+  compute: function (a) {
+    var ids = ["gcs", "vol", "ivh", "infra", "age"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var mort = ["0%", "13%", "26%", "72%", "97%", "100%", "not observed in the derivation cohort"][t];
+    var level = t <= 1 ? "ok" : t === 2 ? "warn" : "crit";
+    return { complete: true, score: t, unit: "of 6", level: level,
+      label: "30-day mortality " + (t === 6 ? "very high" : mort),
+      detail: t === 6 ? "Score 6 was not observed in the derivation cohort" : "Observed 30-day mortality in the derivation cohort",
+      summary: "ICH score " + t + "/6 (30-day mortality " + mort + ")" };
+  },
+  notes: [
+    "ABC/2: A = largest diameter on the slice with the largest haemorrhage, B = largest diameter perpendicular to A on the same slice, C = number of slices with haemorrhage × slice thickness (all in cm). Volume ≈ A × B × C / 2 mL.",
+    "For irregular haematomas, Kothari counts a slice as 1 if its area is ≥ 75% of the largest slice, 0.5 if 25–75%, and 0 if < 25%.",
+    "Mortality figures describe the 2001 derivation cohort. Do not use the score alone to limit care."
+  ],
+  refs: [
+    "Hemphill JC 3rd, Bonovich DC, Besmertis L, et al. The ICH score: a simple, reliable grading scale for intracerebral hemorrhage. Stroke 2001;32:891–897.",
+    "Kothari RU, Brott T, Broderick JP, et al. The ABCs of measuring intracerebral hemorrhage volumes. Stroke 1996;27:1304–1305."
+  ]
+},
+{
+  id: "hunt-hess", abbr: "H&H", name: "Hunt and Hess grade", cat: "Cerebrovascular",
+  desc: "Clinical grade in aneurysmal SAH",
+  keywords: "subarachnoid hemorrhage haemorrhage aneurysm sah clinical grade",
+  intro: "Choose the description that best fits the patient on admission.",
+  items: [
+    { id: "g", label: "Clinical picture", options: [
+      opt(1, "Grade I", null, "Asymptomatic, or minimal headache and slight nuchal rigidity"),
+      opt(2, "Grade II", null, "Moderate to severe headache, nuchal rigidity; no neurological deficit other than cranial nerve palsy"),
+      opt(3, "Grade III", null, "Drowsiness, confusion, or mild focal deficit"),
+      opt(4, "Grade IV", null, "Stupor, moderate to severe hemiparesis; possibly early decerebrate rigidity and vegetative disturbances"),
+      opt(5, "Grade V", null, "Deep coma, decerebrate rigidity, moribund appearance")] },
+    { id: "sys", type: "toggle", label: "Original modifier", tag: "optional",
+      toggle: { label: "Serious systemic disease or severe angiographic vasospasm", sub: "e.g., hypertension, diabetes, severe atherosclerosis, chronic lung disease. Moves the patient one grade worse (maximum V)." } }
+  ],
+  compute: function (a) {
+    if (a.g === undefined) return { complete: false, remaining: 1 };
+    var g = Math.min(5, a.g + (a.sys ? 1 : 0));
+    var level = g <= 2 ? "ok" : g === 3 ? "warn" : "crit";
+    var label = ["", "Good grade", "Good grade", "Intermediate grade", "Poor grade", "Poor grade"][g];
+    return { complete: true, score: roman[g], unit: "Hunt & Hess", level: level, label: label,
+      detail: a.sys && a.g < 5 ? "Grade " + roman[a.g] + " moved up one for systemic disease or vasospasm" : (a.sys ? "Already at maximum grade" : "Clinical grade on admission"),
+      summary: "Hunt and Hess grade " + roman[g] + (a.sys ? " (modifier applied)" : "") };
+  },
+  notes: ["Many units use grades IV–V to define poor-grade SAH. Report which scale you used, because Hunt and Hess and WFNS grades are not interchangeable."],
+  refs: ["Hunt WE, Hess RM. Surgical risk as related to time of intervention in the repair of intracranial aneurysms. J Neurosurg 1968;28:14–20."]
+},
+{
+  id: "wfns", abbr: "WFNS", name: "WFNS SAH grade", cat: "Cerebrovascular",
+  desc: "GCS-based grade in aneurysmal SAH",
+  keywords: "subarachnoid hemorrhage haemorrhage aneurysm sah world federation",
+  intro: "Uses the GCS and the presence of a major focal motor deficit.",
+  items: [
+    { id: "gcs", label: "GCS", options: [opt("15", "15"), opt("13-14", "13–14"), opt("7-12", "7–12"), opt("3-6", "3–6")] },
+    { id: "motor", label: "Major focal motor deficit", hint: "e.g., hemiparesis or aphasia", options: YES_NO,
+      when: function (a) { return a.gcs === "15" || a.gcs === "13-14"; } }
+  ],
+  compute: function (a) {
+    if (a.gcs === undefined) return { complete: false, remaining: 1 };
+    var g = null;
+    if (a.gcs === "7-12") g = 4;
+    else if (a.gcs === "3-6") g = 5;
+    else if (a.motor === undefined) return { complete: false, remaining: 1 };
+    else if (a.gcs === "15") g = a.motor === "no" ? 1 : 0;
+    else g = a.motor === "no" ? 2 : 3;
+    if (g === 0) return { complete: true, score: "?", unit: "WFNS", level: "info",
+      label: "Not defined in the original scale", detail: "GCS 15 with a focal motor deficit has no WFNS grade",
+      summary: "WFNS: GCS 15 with focal motor deficit (not defined in the original scale)" };
+    var level = g <= 2 ? "ok" : g === 3 ? "warn" : "crit";
+    return { complete: true, score: roman[g], unit: "WFNS", level: level,
+      label: g >= 4 ? "Poor grade" : g === 3 ? "Intermediate grade" : "Good grade",
+      detail: ["", "GCS 15, no motor deficit", "GCS 13–14, no motor deficit", "GCS 13–14 with motor deficit", "GCS 7–12, with or without deficit", "GCS 3–6, with or without deficit"][g],
+      summary: "WFNS grade " + roman[g] };
+  },
+  notes: ["The motor deficit matters only for GCS 13–14, where it separates grade II from grade III."],
+  refs: ["Drake CG. Report of World Federation of Neurological Surgeons Committee on a Universal Subarachnoid Hemorrhage Grading Scale. J Neurosurg 1988;68:985–986."]
+},
+{
+  id: "mfisher", abbr: "mFS", name: "Modified Fisher scale", cat: "Cerebrovascular",
+  desc: "CT grade predicting symptomatic vasospasm",
+  keywords: "subarachnoid hemorrhage haemorrhage sah vasospasm ct fisher frontera dci",
+  intro: "Grade the first non-contrast CT.",
+  items: [
+    { id: "g", label: "CT findings", options: [
+      opt(0, "Grade 0", null, "No SAH, no IVH"),
+      opt(1, "Grade 1", null, "Thin SAH (focal or diffuse), no IVH"),
+      opt(2, "Grade 2", null, "Thin SAH (focal or diffuse), with IVH"),
+      opt(3, "Grade 3", null, "Thick SAH (focal or diffuse), no IVH"),
+      opt(4, "Grade 4", null, "Thick SAH (focal or diffuse), with IVH")] }
+  ],
+  compute: function (a) {
+    if (a.g === undefined) return { complete: false, remaining: 1 };
+    var map = [
+      ["Very low vasospasm risk", "ok", "No subarachnoid or ventricular blood"],
+      ["Low vasospasm risk", "ok", "Reference group for the odds ratios (grades 0–1)"],
+      ["Intermediate vasospasm risk", "warn", "Crude OR 1.6 vs grades 0–1 (Frontera 2006)"],
+      ["Intermediate vasospasm risk", "warn", "Crude OR 1.6 vs grades 0–1 (Frontera 2006)"],
+      ["High vasospasm risk", "crit", "Crude OR 2.2 vs grades 0–1 (Frontera 2006)"]
+    ][a.g];
+    return { complete: true, score: a.g, unit: "mFisher", label: map[0], level: map[1], detail: map[2],
+      summary: "Modified Fisher grade " + a.g + " (" + map[0].toLowerCase() + ")" };
+  },
+  notes: [
+    "Overall, 33% of the 1355 patients in the derivation data developed symptomatic vasospasm.",
+    "The original paper gave no thickness cut-off. Many units call blood thick when it is > 1 mm or fills a cistern or fissure; state your definition."
+  ],
+  refs: [
+    "Frontera JA, Claassen J, Schmidt JM, et al. Prediction of symptomatic vasospasm after subarachnoid hemorrhage: the modified Fisher scale. Neurosurgery 2006;59:21–27.",
+    "Claassen J, Bernardini GL, Kreiter K, et al. Effect of cisternal and ventricular blood on risk of delayed cerebral ischemia after subarachnoid hemorrhage: the Fisher scale revisited. Stroke 2001;32:2012–2020."
+  ]
+},
+{
+  id: "spetzler-martin", abbr: "S-M", name: "Spetzler–Martin AVM grade", cat: "Cerebrovascular",
+  desc: "Surgical risk grade for brain AVMs, with Spetzler–Ponce class",
+  keywords: "avm arteriovenous malformation eloquent venous drainage ponce",
+  intro: "Measure the nidus on angiography or MRI.",
+  items: [
+    { id: "size", label: "Nidus size (largest diameter)", options: [opt("s", "Small, < 3 cm", 1), opt("m", "Medium, 3–6 cm", 2), opt("l", "Large, > 6 cm", 3)] },
+    { id: "eloq", label: "Eloquence of adjacent brain", hint: "Eloquent: sensorimotor, language or visual cortex; hypothalamus, thalamus, internal capsule, brainstem, cerebellar peduncles, deep cerebellar nuclei.",
+      options: [opt("no", "Non-eloquent", 0), opt("yes", "Eloquent", 1)] },
+    { id: "ven", label: "Venous drainage", options: [opt("sup", "Superficial only", 0), opt("deep", "Any deep drainage", 1, "e.g., internal cerebral veins, basal veins, precentral cerebellar vein")] }
+  ],
+  compute: function (a) {
+    var ids = ["size", "eloq", "ven"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var g = sumPts(this, a, ids);
+    var sp = g <= 2 ? ["A", "ok", "Suggested: microsurgical resection"] : g === 3 ? ["B", "warn", "Suggested: multimodality treatment"] : ["C", "crit", "Suggested: generally observation"];
+    return { complete: true, score: roman[g], unit: "S-M grade", level: sp[1],
+      label: "Spetzler–Ponce class " + sp[0], detail: sp[2],
+      summary: "Spetzler–Martin grade " + roman[g] + ", Spetzler–Ponce class " + sp[0] };
+  },
+  notes: ["Spetzler–Ponce suggestions are general; ruptured, small deep or other special cases need individual decisions."],
+  refs: [
+    "Spetzler RF, Martin NA. A proposed grading system for arteriovenous malformations. J Neurosurg 1986;65:476–483.",
+    "Spetzler RF, Ponce FA. A 3-tier classification of cerebral arteriovenous malformations. J Neurosurg 2011;114:842–849."
+  ]
+},
+
+/* ---------------- SPINE TRAUMA ---------------- */
+{
+  id: "tlics", abbr: "TLICS", name: "TLICS", cat: "Spine trauma",
+  desc: "Thoracolumbar Injury Classification and Severity Score",
+  keywords: "thoracolumbar fracture plc burst vaccaro",
+  intro: "Score the most severe injury pattern at the level being assessed.",
+  items: [
+    { id: "morph", label: "Injury morphology", options: [
+      opt("comp", "Compression", 1), opt("burst", "Burst", 2),
+      opt("trans", "Translation / rotation", 3), opt("dist", "Distraction", 4)] },
+    { id: "plc", label: "Posterior ligamentous complex", options: [
+      opt("intact", "Intact", 0), opt("susp", "Suspected / indeterminate", 2), opt("inj", "Injured", 3)] },
+    { id: "neuro", label: "Neurological status", options: [
+      opt("intact", "Intact", 0), opt("root", "Nerve root injury", 2),
+      opt("complete", "Cord or conus — complete", 2), opt("incomplete", "Cord or conus — incomplete", 3),
+      opt("ce", "Cauda equina", 3)] }
+  ],
+  compute: function (a) {
+    var ids = ["morph", "plc", "neuro"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var r = t <= 3 ? ["Non-operative", "ok", "Score ≤ 3"] : t === 4 ? ["Operative or non-operative", "warn", "Score 4: surgeon's choice"] : ["Operative", "crit", "Score ≥ 5"];
+    return { complete: true, score: t, unit: "TLICS", level: r[1], label: r[0], detail: r[2],
+      summary: "TLICS " + t + " (" + r[0].toLowerCase() + ")" };
+  },
+  notes: ["Patient factors such as ankylosing spondylitis, polytrauma or severe osteoporosis can change the decision at any score."],
+  refs: ["Vaccaro AR, Lehman RA Jr, Hurlbert RJ, et al. A new classification of thoracolumbar injuries: the importance of injury morphology, the integrity of the posterior ligamentous complex, and neurologic status. Spine 2005;30:2325–2333."]
+},
+{
+  id: "tl-aosis", abbr: "AO TL", name: "AO Spine thoracolumbar (TL AOSIS)", cat: "Spine trauma",
+  desc: "AO Spine classification code with injury score",
+  keywords: "ao spine aospine thoracolumbar injury score classification a0 a1 a2 a3 a4 b1 b2 b3 n0 n1 m1 chance",
+  intro: "Choose the highest-grade morphology, the neurological grade, and any modifiers.",
+  items: [
+    { id: "morph", label: "Morphology", options: [
+      opt("A0", "A0 — Minor, non-structural", 0, "Transverse or spinous process fracture"),
+      opt("A1", "A1 — Wedge-compression", 1, "Single endplate, posterior wall intact"),
+      opt("A2", "A2 — Split / pincer", 2, "Both endplates, posterior wall intact"),
+      opt("A3", "A3 — Incomplete burst", 3, "Single endplate and posterior wall"),
+      opt("A4", "A4 — Complete burst", 5, "Both endplates and posterior wall"),
+      opt("B1", "B1 — Transosseous tension band disruption", 5, "Monosegmental osseous injury (Chance fracture)"),
+      opt("B2", "B2 — Posterior tension band disruption", 6, "Osseous and/or ligamentous"),
+      opt("B3", "B3 — Hyperextension", 7, "Anterior tension band disruption"),
+      opt("C", "C — Displacement / translation", 8, "In any direction")] },
+    { id: "neuro", label: "Neurological status", options: [
+      opt("N0", "N0 — Neurologically intact", 0),
+      opt("N1", "N1 — Transient deficit, resolved", 1),
+      opt("N2", "N2 — Radicular symptoms", 2),
+      opt("N3", "N3 — Incomplete cord or any cauda equina injury", 4),
+      opt("N4", "N4 — Complete cord injury", 4),
+      opt("NX", "NX — Cannot be examined", 3, "e.g., sedated or head injury")] },
+    { id: "m1", type: "toggle", label: "Modifier M1", tag: "optional", toggle: { label: "M1 — Indeterminate tension band injury", sub: "Uncertain posterior ligamentous complex injury", pts: 1 } },
+    { id: "m2", type: "toggle", label: "Modifier M2", tag: "optional", toggle: { label: "M2 — Patient-specific comorbidity", sub: "e.g., ankylosing spondylitis, DISH, osteoporosis, burns over the injury. Adds no points.", pts: 0 } }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["morph", "neuro"]);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ["morph", "neuro"]) + (a.m1 ? 1 : 0);
+    var code = a.morph + " · " + a.neuro + (a.m1 ? " · M1" : "") + (a.m2 ? " · M2" : "");
+    var r = t <= 3 ? ["Trial of non-operative treatment", "ok"] : t <= 5 ? ["Operative or non-operative", "warn"] : ["Operative", "crit"];
+    return { complete: true, score: t, unit: "TL AOSIS", level: r[1], label: r[0],
+      detail: code + (a.m2 ? " · consider M2 in the decision" : ""),
+      summary: "AO Spine TL " + code + ", TL AOSIS " + t + " (" + r[0].toLowerCase() + ")" };
+  },
+  notes: [
+    "Thresholds from the AO Spine surgical algorithm: ≤ 3 trial of non-operative treatment, 4–5 either, > 5 operative.",
+    "Type B injuries are usually reported with the associated type A pattern; the score uses the highest morphology."
+  ],
+  refs: [
+    "Vaccaro AR, Oner C, Kepler CK, et al. AOSpine thoracolumbar spine injury classification system. Spine 2013;38:2028–2037.",
+    "Kepler CK, Vaccaro AR, Schroeder GD, et al. The Thoracolumbar AOSpine Injury Score. Global Spine J 2016;6:329–334.",
+    "Vaccaro AR, Schroeder GD, Kepler CK, et al. The surgical algorithm for the AOSpine thoracolumbar spine injury classification system. Eur Spine J 2016;25:1087–1094."
+  ]
+},
+{
+  id: "slic", abbr: "SLIC", name: "SLIC", cat: "Spine trauma",
+  desc: "Subaxial Cervical Spine Injury Classification",
+  keywords: "subaxial cervical spine fracture dlc facet dislocation vaccaro",
+  intro: "For C3–C7 injuries. Score the most severe morphology.",
+  items: [
+    { id: "morph", label: "Morphology", options: [
+      opt("none", "No abnormality", 0), opt("comp", "Compression", 1), opt("burst", "Burst", 2),
+      opt("dist", "Distraction", 3, "e.g., facet perch, hyperextension"),
+      opt("rot", "Rotation / translation", 4, "e.g., facet dislocation, unstable teardrop, advanced flexion-compression")] },
+    { id: "dlc", label: "Disco-ligamentous complex", options: [
+      opt("intact", "Intact", 0),
+      opt("indet", "Indeterminate", 1, "e.g., isolated interspinous widening, MRI signal change only"),
+      opt("disr", "Disrupted", 2, "e.g., widened anterior disc space, facet perch or dislocation")] },
+    { id: "neuro", label: "Neurological status", options: [
+      opt("intact", "Intact", 0), opt("root", "Root injury", 1),
+      opt("complete", "Complete cord injury", 2), opt("incomplete", "Incomplete cord injury", 3)] },
+    { id: "cc", type: "toggle", label: "Neuro modifier", tag: "optional",
+      toggle: { label: "Continuous cord compression with a neurological deficit", sub: "e.g., disc herniation. Adds 1 point only when there is a deficit.", pts: 1 } }
+  ],
+  compute: function (a) {
+    var ids = ["morph", "dlc", "neuro"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var ccValid = a.cc && a.neuro !== "intact";
+    if (ccValid) t += 1;
+    var r = t <= 3 ? ["Non-operative", "ok", "Score ≤ 3"] : t === 4 ? ["Operative or non-operative", "warn", "Score 4: surgeon's choice"] : ["Operative", "crit", "Score ≥ 5"];
+    var detail = r[2] + (a.cc && !ccValid ? " · compression modifier not added (neurologically intact)" : "");
+    return { complete: true, score: t, unit: "SLIC", level: r[1], label: r[0], detail: detail,
+      summary: "SLIC " + t + " (" + r[0].toLowerCase() + ")" };
+  },
+  notes: ["Score the worst level when several levels are injured."],
+  refs: ["Vaccaro AR, Hulbert RJ, Patel AA, et al. The subaxial cervical spine injury classification system. Spine 2007;32:2365–2374."]
+},
+
+/* ---------------- SPINE TUMOUR & DEGENERATIVE ---------------- */
+{
+  id: "sins", abbr: "SINS", name: "Spinal Instability Neoplastic Score", cat: "Spine: tumour",
+  desc: "Mechanical instability from spinal metastases",
+  keywords: "sins metastasis metastases tumour tumor instability fisher oncology",
+  intro: "Score the most affected level using clinical findings and CT.",
+  items: [
+    { id: "loc", label: "Location", options: [
+      opt("junc", "Junctional", 3, "Occiput–C2, C7–T2, T11–L1, L5–S1"),
+      opt("mob", "Mobile spine", 2, "C3–C6, L2–L4"),
+      opt("semi", "Semi-rigid", 1, "T3–T10"),
+      opt("rigid", "Rigid", 0, "S2–S5")] },
+    { id: "pain", label: "Pain", hint: "Mechanical pain: improves when lying down and/or worsens with movement or loading of the spine.", options: [
+      opt("mech", "Mechanical pain", 3), opt("occ", "Occasional pain, not mechanical", 1), opt("none", "Pain-free lesion", 0)] },
+    { id: "bone", label: "Bone lesion", options: [opt("lytic", "Lytic", 2), opt("mixed", "Mixed lytic/blastic", 1), opt("blastic", "Blastic", 0)] },
+    { id: "align", label: "Radiographic alignment", options: [
+      opt("sub", "Subluxation or translation", 4), opt("deform", "De novo deformity", 2, "kyphosis or scoliosis"), opt("normal", "Normal alignment", 0)] },
+    { id: "collapse", label: "Vertebral body collapse", options: [
+      opt("gt50", "> 50% collapse", 3), opt("lt50", "< 50% collapse", 2),
+      opt("inv", "No collapse, > 50% of body involved", 1), opt("none", "None of the above", 0)] },
+    { id: "pl", label: "Posterolateral involvement", hint: "Facet, pedicle or costovertebral joint fracture or replacement with tumour.", options: [
+      opt("bi", "Bilateral", 3), opt("uni", "Unilateral", 1), opt("none", "None", 0)] }
+  ],
+  compute: function (a) {
+    var ids = ["loc", "pain", "bone", "align", "collapse", "pl"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var r = t <= 6 ? ["Stable", "ok", "0–6"] : t <= 12 ? ["Potentially unstable", "warn", "7–12: surgical consultation advised"] : ["Unstable", "crit", "13–18: surgical consultation advised"];
+    return { complete: true, score: t, unit: "of 18", level: r[1], label: r[0], detail: r[2],
+      summary: "SINS " + t + "/18 (" + r[0].toLowerCase() + ")" };
+  },
+  notes: ["SINS assesses mechanical stability only. Neurological status and oncology (e.g., NOMS) are assessed separately."],
+  refs: ["Fisher CG, DiPaola CP, Ryken TC, et al. A novel classification system for spinal instability in neoplastic disease. Spine 2010;35:E1221–E1229."]
+},
+{
+  id: "mjoa", abbr: "mJOA", name: "Modified JOA score", cat: "Spine: degenerative",
+  desc: "Severity of degenerative cervical myelopathy",
+  keywords: "mjoa myelopathy cervical dcm japanese orthopaedic association benzel",
+  intro: "Ask about current function in each domain.",
+  items: [
+    { id: "ue", label: "Upper limb motor", options: [
+      opt(0, "Unable to move hands", 0),
+      opt(1, "Unable to eat with a spoon, but able to move hands", 1),
+      opt(2, "Unable to button shirt, but able to eat with a spoon", 2),
+      opt(3, "Able to button shirt with great difficulty", 3),
+      opt(4, "Able to button shirt with slight difficulty", 4),
+      opt(5, "No dysfunction", 5)] },
+    { id: "le", label: "Lower limb motor", options: [
+      opt(0, "Complete loss of motor and sensory function", 0),
+      opt(1, "Sensation preserved, unable to move legs", 1),
+      opt(2, "Able to move legs, unable to walk", 2),
+      opt(3, "Walks on flat floor with a walking aid", 3, "cane or crutch"),
+      opt(4, "Walks up and/or down stairs with a hand rail", 4),
+      opt(5, "Moderate to significant imbalance, but climbs stairs without a rail", 5),
+      opt(6, "Mild imbalance, walks unaided with smooth reciprocation", 6),
+      opt(7, "No dysfunction", 7)] },
+    { id: "sens", label: "Upper limb sensation", options: [
+      opt(0, "Complete loss of hand sensation", 0), opt(1, "Severe sensory loss or pain", 1),
+      opt(2, "Mild sensory loss", 2), opt(3, "No sensory loss", 3)] },
+    { id: "sph", label: "Bladder function", options: [
+      opt(0, "Unable to micturate voluntarily", 0), opt(1, "Marked difficulty with micturition", 1),
+      opt(2, "Mild to moderate difficulty with micturition", 2), opt(3, "Normal micturition", 3)] }
+  ],
+  compute: function (a) {
+    var ids = ["ue", "le", "sens", "sph"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var r = t === 18 ? ["No deficit on mJOA", "ok"] : t >= 15 ? ["Mild myelopathy", "ok"] : t >= 12 ? ["Moderate myelopathy", "warn"] : ["Severe myelopathy", "crit"];
+    return { complete: true, score: t, unit: "of 18", level: r[1], label: r[0],
+      detail: "Mild 15–17 · Moderate 12–14 · Severe 0–11",
+      summary: "mJOA " + t + "/18 (" + r[0].toLowerCase() + ")" };
+  },
+  notes: ["Severity bands are those of Tetreault et al. for degenerative cervical myelopathy."],
+  refs: [
+    "Benzel EC, Lancon J, Kesterson L, Hadden T. Cervical laminectomy and dentate ligament section for cervical spondylotic myelopathy. J Spinal Disord 1991;4:286–295.",
+    "Tetreault L, Kopjar B, Nouri A, et al. The modified Japanese Orthopaedic Association scale: establishing criteria for mild, moderate and severe impairment in patients with degenerative cervical myelopathy. Eur Spine J 2017;26:78–84."
+  ]
+}
+];
+/* ===== Builders for the larger set ===== */
+function P(v, label, sub, level, code, rl, detail) { return { v: v, label: label, sub: sub, level: level, code: code, rl: rl, detail: detail }; }
+function YN(id, label, hint, when) { var it = { id: id, label: label, options: YES_NO }; if (hint) it.hint = hint; if (when) it.when = when; return it; }
+function anyYes(a, ids) { return ids.some(function (id) { return a[id] === "yes"; }); }
+function bandOf(t, bands) { for (var i = 0; i < bands.length; i++) { if (t <= bands[i][0]) return bands[i]; } return bands[bands.length - 1]; }
+function isOn(item, a) { return !item.when || item.when(a); }
+function sumCalc(c) {
+  c.compute = function (a) {
+    var req = c.items.filter(function (i) { return i.options && !i.optional && isOn(i, a); }).map(function (i) { return i.id; });
+    var n = missing(a, req);
+    if (n) return { complete: false, remaining: n };
+    var t = 0;
+    c.items.forEach(function (i) {
+      if (i.options && a[i.id] !== undefined && isOn(i, a)) {
+        var o = i.options.find(function (x) { return x.v === a[i.id]; });
+        if (o && typeof o.pts === "number") t += o.pts;
+      }
+      if (i.type === "toggle" && a[i.id] && i.toggle.pts) t += i.toggle.pts;
+      if (i.type === "checks") i.checks.forEach(function (ch) { if (a[ch.id] && ch.pts) t += ch.pts; });
+    });
+    t = Math.round(t * 10) / 10;
+    var b = bandOf(t, c.bands);
+    var r = { complete: true, score: t, unit: c.unit || (c.outOf ? "of " + c.outOf : ""), label: b[1], level: b[2], detail: b[3] || "",
+      summary: (c.sumName || c.abbr) + " " + t + (c.outOf ? "/" + c.outOf : "") + " — " + b[1] };
+    if (c.post) c.post(r, a, t);
+    return r;
+  };
+  return c;
+}
+function pickCalc(c) {
+  c.compute = function (a) {
+    var it = c.items[0];
+    if (a[it.id] === undefined) return { complete: false, remaining: 1 };
+    var o = it.options.find(function (x) { return x.v === a[it.id]; });
+    var code = o.code !== undefined ? o.code : o.v;
+    var rl = o.rl || o.label;
+    return { complete: true, score: code, unit: c.unit || "", label: rl, level: o.level || "info",
+      detail: o.detail !== undefined ? o.detail : (o.sub || ""),
+      summary: (c.sumName || c.name) + ": " + code + " — " + rl };
+  };
+  return c;
+}
+function num(a, id) { var v = a[id]; return typeof v === "number" && isFinite(v) && v > 0 ? v : null; }
+function ciwaItem(id, label, anchors, max) {
+  var opts = [];
+  var keys = Object.keys(anchors).map(Number).sort(function (x, y) { return x - y; });
+  for (var v = 0; v <= max; v++) {
+    var lab = anchors[v];
+    if (!lab) {
+      var lo = keys.filter(function (k) { return k < v; }).pop(), hi = keys.filter(function (k) { return k > v; })[0];
+      lab = "Between " + lo + " and " + hi;
+    }
+    opts.push({ v: v, label: lab, pts: v });
+  }
+  var hint = keys.map(function (k) { return k + " = " + anchors[k]; }).join(" · ");
+  return { id: id, label: label, options: opts, compact: true, hint: hint };
+}
+var SCALE_PHQ = [opt(0, "Not at all", 0), opt(1, "Several days", 1), opt(2, "More than half the days", 2), opt(3, "Nearly every day", 3)];
+var SCALE_SEV5 = [opt(0, "Not present", 0), opt(1, "Mild", 1), opt(2, "Moderate", 2), opt(3, "Severe", 3), opt(4, "Very severe", 4)];
+var SCALE_AIMS = [opt(0, "None", 0), opt(1, "Minimal", 1), opt(2, "Mild", 2), opt(3, "Moderate", 3), opt(4, "Severe", 4)];
+var SCALE_MRC = [opt(0, "No visible contraction", 0), opt(1, "Flicker of contraction", 1), opt(2, "Active movement, gravity eliminated", 2), opt(3, "Active movement against gravity", 3), opt(4, "Against gravity and some resistance", 4), opt(5, "Normal power", 5)];
+var FREQ5 = function (lastLabel) { return [opt(0, "Never", 0), opt(1, "Less than monthly", 1), opt(2, "Monthly", 2), opt(3, "Weekly", 3), opt(4, lastLabel || "Daily or almost daily", 4)]; };
+var INJ3 = [opt("no", "No", 0), opt("past", "Yes, but not in the last year", 2), opt("year", "Yes, during the last year", 4)];
+
+var MORE = [
+
+/* ================= NEUROSURGERY: HEAD INJURY & COMA ================= */
+sumCalc({
+  id: "pgcs", abbr: "pGCS", name: "Paediatric GCS (preverbal)", cat: "Head injury & coma",
+  desc: "GCS adapted for infants and young children", keywords: "pediatric paediatric child infant coma consciousness",
+  intro: "For preverbal children, roughly under 2 years. Older children use the adult GCS.", unit: "pGCS",
+  items: [
+    { id: "e", label: "Eye opening", options: [opt(4, "Spontaneous", 4), opt(3, "To sound", 3), opt(2, "To pain", 2), opt(1, "None", 1)] },
+    { id: "v", label: "Verbal response", options: [opt(5, "Coos, babbles", 5), opt(4, "Irritable cry", 4), opt(3, "Cries to pain", 3), opt(2, "Moans to pain", 2), opt(1, "None", 1)] },
+    { id: "m", label: "Motor response", options: [opt(6, "Moves spontaneously and purposefully", 6), opt(5, "Withdraws to touch", 5), opt(4, "Withdraws to pain", 4), opt(3, "Abnormal flexion to pain", 3, "decorticate"), opt(2, "Extension to pain", 2, "decerebrate"), opt(1, "None", 1)] }
+  ],
+  bands: [[8, "Severe (3–8)", "crit"], [12, "Moderate (9–12)", "warn"], [15, "Mild (13–15)", "ok"]],
+  post: function (r, a) { r.detail = "E" + a.e + " V" + a.v + " M" + a.m; },
+  refs: ["James HE. Neurologic evaluation and support in the child with an acute brain insult. Pediatr Ann 1986;15:16–22."]
+}),
+{
+  id: "rotterdam", abbr: "ROT", name: "Rotterdam CT score", cat: "Head injury & coma",
+  desc: "CT score with 6-month mortality in TBI", keywords: "tbi head injury ct cisterns midline shift epidural tsah ivh mortality maas",
+  intro: "Score the admission CT. One point is added to the sum, so scores run from 1 to 6.",
+  items: [
+    { id: "cis", label: "Basal cisterns", options: [opt("n", "Normal", 0), opt("c", "Compressed", 1), opt("a", "Absent", 2)] },
+    { id: "mls", label: "Midline shift", options: [opt("le5", "None or ≤ 5 mm", 0), opt("gt5", "> 5 mm", 1)] },
+    { id: "edh", label: "Epidural mass lesion", options: [opt("yes", "Present", 0), opt("no", "Absent", 1)] },
+    { id: "ivh", label: "Intraventricular blood or traumatic SAH", options: [opt("no", "Absent", 0), opt("yes", "Present", 1)] }
+  ],
+  compute: function (a) {
+    var ids = ["cis", "mls", "edh", "ivh"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids) + 1;
+    var m = ["", "0%", "7%", "16%", "26%", "53%", "61%"][t];
+    return { complete: true, score: t, unit: "of 6", level: t <= 2 ? "ok" : t <= 4 ? "warn" : "crit",
+      label: "6-month mortality " + m, detail: "Adult derivation cohort (Maas 2005)",
+      summary: "Rotterdam CT score " + t + " (6-month mortality " + m + ")" };
+  },
+  notes: ["An epidural haematoma scores 0 because it carries a better prognosis than other mass lesions."],
+  refs: ["Maas AI, Hukkelhoven CW, Marshall LF, Steyerberg EW. Prediction of outcome in traumatic brain injury with computed tomographic characteristics. Neurosurgery 2005;57:1173–1182."]
+},
+sumCalc({
+  id: "four", abbr: "FOUR", name: "FOUR score", cat: "Head injury & coma",
+  desc: "Full Outline of UnResponsiveness, usable in intubated patients", keywords: "coma unresponsiveness brainstem intubated icu wijdicks",
+  intro: "Each component scores 0–4. Unlike the GCS, it does not need a verbal response.", outOf: 16,
+  items: [
+    { id: "e", label: "Eye response", options: [opt(4, "Eyelids open or opened, tracking or blinking to command", 4), opt(3, "Eyelids open but not tracking", 3), opt(2, "Eyelids closed, open to loud voice", 2), opt(1, "Eyelids closed, open to pain", 1), opt(0, "Eyelids remain closed with pain", 0)] },
+    { id: "m", label: "Motor response", options: [opt(4, "Thumbs-up, fist or peace sign to command", 4), opt(3, "Localising to pain", 3), opt(2, "Flexion response to pain", 2), opt(1, "Extension response to pain", 1), opt(0, "No response to pain, or generalised myoclonus status", 0)] },
+    { id: "b", label: "Brainstem reflexes", options: [opt(4, "Pupil and corneal reflexes present", 4), opt(3, "One pupil wide and fixed", 3), opt(2, "Pupil or corneal reflexes absent", 2), opt(1, "Pupil and corneal reflexes absent", 1), opt(0, "Pupil, corneal and cough reflexes absent", 0)] },
+    { id: "r", label: "Respiration", options: [opt(4, "Not intubated, regular breathing", 4), opt(3, "Not intubated, Cheyne–Stokes breathing", 3), opt(2, "Not intubated, irregular breathing", 2), opt(1, "Breathes above ventilator rate", 1), opt(0, "Breathes at ventilator rate, or apnoea", 0)] }
+  ],
+  bands: [[16, "Lower scores mean deeper coma", "info"]],
+  post: function (r, a, t) {
+    r.detail = "E" + a.e + " M" + a.m + " B" + a.b + " R" + a.r;
+    if (t === 0) { r.label = "FOUR 0: consider brain death evaluation"; r.level = "crit"; }
+    r.summary = "FOUR score " + t + "/16 (" + r.detail + ")";
+  },
+  refs: ["Wijdicks EF, Bamlet WR, Maramattom BV, et al. Validation of a new coma scale: the FOUR score. Ann Neurol 2005;58:585–593."]
+}),
+pickCalc({
+  id: "gos", abbr: "GOS", name: "Glasgow Outcome Scale", cat: "Head injury & coma",
+  desc: "Global outcome after brain injury", keywords: "outcome tbi disability recovery jennett", intro: "Choose the category that fits the patient's current state.", unit: "GOS",
+  items: [{ id: "g", label: "Outcome", options: [
+    P(5, "Good recovery", "Resumes normal life, may have minor deficits", "ok"),
+    P(4, "Moderate disability", "Disabled but independent in daily life", "ok"),
+    P(3, "Severe disability", "Conscious but dependent on others for daily support", "warn"),
+    P(2, "Vegetative state", "Unresponsive and speechless", "crit"),
+    P(1, "Death", "", "crit")] }],
+  notes: ["GOS 1–3 is usually reported as an unfavourable outcome."],
+  refs: ["Jennett B, Bond M. Assessment of outcome after severe brain damage. Lancet 1975;1:480–484."]
+}),
+pickCalc({
+  id: "gose", abbr: "GOS-E", name: "Glasgow Outcome Scale – Extended", cat: "Head injury & coma",
+  desc: "Eight-level outcome after brain injury", keywords: "outcome tbi disability recovery extended", intro: "Choose the level that fits, ideally from the structured interview.", unit: "GOS-E",
+  items: [{ id: "g", label: "Outcome", options: [
+    P(8, "Upper good recovery", "Back to normal life; no current problems from the injury that affect daily life", "ok"),
+    P(7, "Lower good recovery", "Back to normal life, with minor problems that affect daily life", "ok"),
+    P(6, "Upper moderate disability", "Independent; back to work or usual activities at reduced capacity", "ok"),
+    P(5, "Lower moderate disability", "Independent at home and outside; unable to work or only in a sheltered setting", "warn"),
+    P(4, "Upper severe disability", "Dependent on others, but can be left alone at home for up to 8 hours", "warn"),
+    P(3, "Lower severe disability", "Dependent on others for most activities; cannot be left alone", "crit"),
+    P(2, "Vegetative state", "", "crit"),
+    P(1, "Death", "", "crit")] }],
+  refs: ["Wilson JT, Pettigrew LE, Teasdale GM. Structured interviews for the Glasgow Outcome Scale and the extended Glasgow Outcome Scale. J Neurotrauma 1998;15:573–585."]
+}),
+{
+  id: "cchr", abbr: "CCHR", name: "Canadian CT Head Rule", cat: "Head injury & coma",
+  desc: "Who needs CT after minor head injury", keywords: "minor head injury ct imaging decision rule stiell mild tbi",
+  intro: "For adults with minor head injury (GCS 13–15) and witnessed loss of consciousness, definite amnesia or witnessed disorientation.",
+  items: [
+    YN("gcs2", "GCS < 15 at 2 hours after injury?"),
+    YN("open", "Suspected open or depressed skull fracture?"),
+    YN("basal", "Any sign of basal skull fracture?", "Haemotympanum, raccoon eyes, CSF otorrhoea or rhinorrhoea, Battle's sign."),
+    YN("vomit", "Two or more episodes of vomiting?"),
+    YN("age", "Age ≥ 65 years?"),
+    YN("amn", "Retrograde amnesia ≥ 30 minutes before impact?"),
+    YN("mech", "Dangerous mechanism?", "Pedestrian struck by a vehicle, occupant ejected, or fall from > 3 feet (0.9 m) or > 5 stairs.")
+  ],
+  compute: function (a) {
+    var ids = ["gcs2", "open", "basal", "vomit", "age", "amn", "mech"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    if (anyYes(a, ["gcs2", "open", "basal", "vomit", "age"])) return { complete: true, score: "CT", unit: "high risk", level: "crit", label: "CT head indicated", detail: "High risk for neurosurgical intervention", summary: "Canadian CT Head Rule: high risk — CT indicated" };
+    if (anyYes(a, ["amn", "mech"])) return { complete: true, score: "CT", unit: "medium risk", level: "warn", label: "CT head indicated", detail: "Medium risk for brain injury on CT", summary: "Canadian CT Head Rule: medium risk — CT indicated" };
+    return { complete: true, score: "No", unit: "CT", level: "ok", label: "CT not required by the rule", detail: "No high- or medium-risk findings", summary: "Canadian CT Head Rule: no risk factors — CT not required by the rule" };
+  },
+  notes: ["The rule does not apply to patients under 16, on anticoagulants or with a bleeding disorder, after a seizure, with an obvious open skull injury, focal deficit or unstable vital signs, or in pregnancy."],
+  refs: ["Stiell IG, Wells GA, Vandemheen K, et al. The Canadian CT Head Rule for patients with minor head injury. Lancet 2001;357:1391–1396."]
+},
+
+/* ================= NEUROSURGERY: CEREBROVASCULAR ================= */
+sumCalc({
+  id: "phases", abbr: "PHASES", name: "PHASES score", cat: "Cerebrovascular",
+  desc: "5-year rupture risk of an unruptured aneurysm", keywords: "unruptured intracranial aneurysm rupture risk greving incidental",
+  intro: "For unruptured saccular aneurysms. Use the largest aneurysm.", unit: "PHASES",
+  items: [
+    { id: "pop", label: "Population", options: [opt("na", "North American or European (not Finnish)", 0), opt("jp", "Japanese", 3), opt("fi", "Finnish", 5)] },
+    { id: "htn", label: "Hypertension", options: [opt("no", "No", 0), opt("yes", "Yes", 1)] },
+    { id: "age", label: "Age", options: [opt("lt70", "< 70 years", 0), opt("ge70", "≥ 70 years", 1)] },
+    { id: "size", label: "Aneurysm size", options: [opt("s", "< 7.0 mm", 0), opt("m", "7.0–9.9 mm", 3), opt("l", "10.0–19.9 mm", 6), opt("g", "≥ 20 mm", 10)] },
+    { id: "esah", label: "Earlier SAH from another aneurysm", options: [opt("no", "No", 0), opt("yes", "Yes", 1)] },
+    { id: "site", label: "Site", options: [opt("ica", "Internal carotid artery", 0), opt("mca", "Middle cerebral artery", 2), opt("oth", "ACA, Pcom or posterior circulation", 4)] }
+  ],
+  bands: [[4, "", "ok"], [9, "", "warn"], [99, "", "crit"]],
+  post: function (r, a, t) {
+    var risk = t <= 2 ? "0.4%" : t >= 12 ? "17.8%" : { 3: "0.7%", 4: "0.9%", 5: "1.3%", 6: "1.7%", 7: "2.4%", 8: "3.2%", 9: "4.3%", 10: "5.3%", 11: "7.2%" }[t];
+    r.label = "5-year rupture risk " + risk;
+    r.detail = "Pooled prospective cohorts (Greving 2014)";
+    r.summary = "PHASES " + t + " (5-year rupture risk " + risk + ")";
+  },
+  notes: ["PHASES does not include aneurysm shape, growth, daughter sacs or family history; weigh those separately."],
+  refs: ["Greving JP, Wermer MJ, Brown RD Jr, et al. Development of the PHASES score for prediction of risk of rupture of intracranial aneurysms. Lancet Neurol 2014;13:59–66."]
+}),
+{
+  id: "lawton-young", abbr: "Supp", name: "Lawton–Young supplementary AVM grade", cat: "Cerebrovascular",
+  desc: "Adds age, rupture and nidus pattern to Spetzler–Martin", keywords: "avm arteriovenous malformation supplementary grade supp-sm lawton",
+  intro: "Add the Spetzler–Martin grade to get the combined Supp-SM grade.",
+  items: [
+    { id: "age", label: "Age", options: [opt("lt20", "< 20 years", 1), opt("20-40", "20–40 years", 2), opt("gt40", "> 40 years", 3)] },
+    { id: "rup", label: "Haemorrhagic presentation", options: [opt("yes", "Ruptured", 0), opt("no", "Unruptured", 1)] },
+    { id: "diff", label: "Nidus", options: [opt("compact", "Compact", 0), opt("diffuse", "Diffuse", 1)] },
+    { id: "sm", label: "Spetzler–Martin grade", options: [opt(1, "I", 1), opt(2, "II", 2), opt(3, "III", 3), opt(4, "IV", 4), opt(5, "V", 5)] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["age", "rup", "diff", "sm"]);
+    if (n) return { complete: false, remaining: n };
+    var s = sumPts(this, a, ["age", "rup", "diff"]);
+    var c = s + a.sm;
+    return { complete: true, score: c, unit: "Supp-SM", level: c <= 6 ? "ok" : "warn",
+      label: c <= 6 ? "Supp-SM ≤ 6: acceptable surgical risk" : "Supp-SM > 6: higher surgical risk",
+      detail: "Supplementary grade " + s + " + Spetzler–Martin " + a.sm,
+      summary: "Lawton–Young supplementary grade " + s + ", Supp-SM " + c };
+  },
+  refs: ["Lawton MT, Kim H, McCulloch CE, et al. A supplementary grading scale for selecting patients with brain arteriovenous malformations for surgery. Neurosurgery 2010;66:702–713."]
+},
+sumCalc({
+  id: "func", abbr: "FUNC", name: "FUNC score", cat: "Cerebrovascular",
+  desc: "Chance of functional independence after ICH", keywords: "intracerebral hemorrhage haemorrhage functional independence outcome rost",
+  intro: "Use admission findings. Higher scores mean a better outlook.", outOf: 11,
+  items: [
+    { id: "vol", label: "ICH volume", options: [opt("lt30", "< 30 mL", 4), opt("30-60", "30–60 mL", 2), opt("gt60", "> 60 mL", 0)] },
+    { id: "age", label: "Age", options: [opt("lt70", "< 70 years", 2), opt("70-79", "70–79 years", 1), opt("ge80", "≥ 80 years", 0)] },
+    { id: "loc", label: "ICH location", options: [opt("lobar", "Lobar", 2), opt("deep", "Deep", 1), opt("infra", "Infratentorial", 0)] },
+    { id: "gcs", label: "GCS", options: [opt("ge9", "≥ 9", 2), opt("le8", "≤ 8", 0)] },
+    { id: "cog", label: "Cognitive impairment before the ICH", options: [opt("no", "No", 1), opt("yes", "Yes", 0)] }
+  ],
+  bands: [[4, "", "crit"], [8, "", "warn"], [11, "", "ok"]],
+  post: function (r, a, t) {
+    var p = t <= 4 ? "0%" : t <= 7 ? "29%" : t === 8 ? "48%" : t <= 10 ? "75%" : "95%";
+    r.label = "Functional independence at 90 days: " + p;
+    r.detail = "GOS ≥ 4 in the derivation cohort (Rost 2008)";
+    r.summary = "FUNC " + t + "/11 (90-day functional independence " + p + ")";
+  },
+  refs: ["Rost NS, Smith EE, Chang Y, et al. Prediction of functional outcome in patients with primary intracerebral hemorrhage: the FUNC score. Stroke 2008;39:2304–2309."]
+}),
+pickCalc({
+  id: "fisher", abbr: "Fisher", name: "Fisher scale (original)", cat: "Cerebrovascular",
+  desc: "Original CT grade of SAH", keywords: "subarachnoid hemorrhage haemorrhage vasospasm ct fisher original", intro: "Grade the first CT. Vasospasm risk peaks at grade 3 in the original scale.", unit: "Fisher",
+  items: [{ id: "g", label: "CT findings", options: [
+    P(1, "Grade 1", "No blood detected", "ok"),
+    P(2, "Grade 2", "Diffuse or vertical layers < 1 mm thick", "ok"),
+    P(3, "Grade 3", "Localised clot and/or vertical layer ≥ 1 mm", "crit", undefined, "Highest vasospasm risk"),
+    P(4, "Grade 4", "Intracerebral or intraventricular clot with diffuse or no SAH", "warn")] }],
+  notes: ["Most units now prefer the modified Fisher scale because risk rises steadily with each grade."],
+  refs: ["Fisher CM, Kistler JP, Davis JM. Relation of cerebral vasospasm to subarachnoid hemorrhage visualized by computerized tomographic scanning. Neurosurgery 1980;6:1–9."]
+}),
+
+/* ================= NEUROSURGERY: SPINE TRAUMA ================= */
+{
+  id: "ais", abbr: "AIS", name: "ASIA Impairment Scale (AIS)", cat: "Spine trauma",
+  desc: "Grade A–E of spinal cord injury (ISNCSCI)", keywords: "asia isncsci spinal cord injury complete incomplete sacral sparing frankel",
+  intro: "Answer from your ISNCSCI examination. Later questions appear only when needed.",
+  items: [
+    YN("normal", "Sensory and motor function normal in all segments?", "Use only when a documented deficit has recovered."),
+    YN("sacral", "Any sacral sparing?", "Light touch or pin prick at S4–5, or deep anal pressure.", function (a) { return a.normal === "no"; }),
+    YN("vac", "Voluntary anal contraction present?", "", function (a) { return a.normal === "no" && a.sacral === "yes"; }),
+    YN("m3", "Motor function more than three levels below the motor level on either side?", "Non-key muscles may be used here.", function (a) { return a.normal === "no" && a.sacral === "yes" && a.vac === "no"; }),
+    YN("half", "At least half of key muscle functions below the single neurological level have grade ≥ 3?", "", function (a) { return a.normal === "no" && a.sacral === "yes" && (a.vac === "yes" || a.m3 === "yes"); })
+  ],
+  compute: function (a) {
+    if (a.normal === "yes") return { complete: true, score: "E", unit: "AIS", level: "ok", label: "Normal", detail: "Normal sensory and motor function", summary: "AIS E (normal)" };
+    if (a.normal === "no" && a.sacral === "no") return { complete: true, score: "A", unit: "AIS", level: "crit", label: "Complete", detail: "No sensory or motor function in S4–5", summary: "AIS A (complete)" };
+    if (a.vac === "no" && a.m3 === "no") return { complete: true, score: "B", unit: "AIS", level: "crit", label: "Sensory incomplete", detail: "Sacral sensory sparing, no motor sparing beyond 3 levels", summary: "AIS B (sensory incomplete)" };
+    if (a.half === "no") return { complete: true, score: "C", unit: "AIS", level: "warn", label: "Motor incomplete", detail: "Fewer than half of key muscles below the NLI have grade ≥ 3", summary: "AIS C (motor incomplete)" };
+    if (a.half === "yes") return { complete: true, score: "D", unit: "AIS", level: "warn", label: "Motor incomplete", detail: "At least half of key muscles below the NLI have grade ≥ 3", summary: "AIS D (motor incomplete)" };
+    return { complete: false, remaining: 1 };
+  },
+  refs: ["Rupp R, Biering-Sørensen F, Burns SP, et al. International Standards for Neurological Classification of Spinal Cord Injury: revised 2019. Top Spinal Cord Inj Rehabil 2021;27(2):1–22."]
+},
+{
+  id: "ccsr", abbr: "CCSR", name: "Canadian C-Spine Rule", cat: "Spine trauma",
+  desc: "Who needs cervical spine imaging after trauma", keywords: "cervical spine imaging decision rule stiell neck trauma",
+  intro: "For alert (GCS 15), stable trauma patients with possible neck injury.",
+  items: [
+    YN("high", "Any high-risk factor?", "Age ≥ 65; dangerous mechanism (fall ≥ 3 ft or 5 stairs, axial load, high-speed or rollover crash, ejection, motorised recreational vehicle, bicycle collision); or paraesthesias in the extremities."),
+    YN("low", "Any low-risk factor that allows safe range-of-motion testing?", "Simple rear-end collision; sitting in the ED; ambulatory at any time; delayed onset of neck pain; no midline C-spine tenderness.", function (a) { return a.high === "no"; }),
+    YN("rot", "Able to actively rotate the neck 45° left and right?", "", function (a) { return a.high === "no" && a.low === "yes"; })
+  ],
+  compute: function (a) {
+    if (a.high === "yes") return { complete: true, score: "Image", unit: "", level: "crit", label: "Imaging indicated", detail: "High-risk factor present", summary: "Canadian C-Spine Rule: high-risk factor — imaging indicated" };
+    if (a.low === "no") return { complete: true, score: "Image", unit: "", level: "warn", label: "Imaging indicated", detail: "No low-risk factor to allow range-of-motion testing", summary: "Canadian C-Spine Rule: no low-risk factor — imaging indicated" };
+    if (a.rot === "no") return { complete: true, score: "Image", unit: "", level: "warn", label: "Imaging indicated", detail: "Unable to rotate the neck 45° both ways", summary: "Canadian C-Spine Rule: unable to rotate — imaging indicated" };
+    if (a.rot === "yes") return { complete: true, score: "No", unit: "imaging", level: "ok", label: "No imaging needed by the rule", detail: "Low risk and full active rotation", summary: "Canadian C-Spine Rule: no imaging needed" };
+    return { complete: false, remaining: 1 };
+  },
+  notes: ["A simple rear-end collision excludes being pushed into oncoming traffic, being hit by a bus or large truck, a rollover, or being hit by a high-speed vehicle."],
+  refs: ["Stiell IG, Wells GA, Vandemheen KL, et al. The Canadian C-spine rule for radiography in alert and stable trauma patients. JAMA 2001;286:1841–1848."]
+},
+{
+  id: "nexus", abbr: "NEXUS", name: "NEXUS C-spine criteria", cat: "Spine trauma",
+  desc: "Low-risk criteria to skip cervical imaging", keywords: "nexus cervical spine imaging decision rule trauma",
+  intro: "Tick each low-risk criterion that the patient meets. Imaging can be skipped only when all five are met.",
+  items: [{ id: "crit", type: "checks", label: "Low-risk criteria met", checks: [
+    { id: "c1", label: "No posterior midline cervical tenderness" },
+    { id: "c2", label: "No focal neurological deficit" },
+    { id: "c3", label: "Normal alertness" },
+    { id: "c4", label: "No evidence of intoxication" },
+    { id: "c5", label: "No painful distracting injury" }] }],
+  compute: function (a) {
+    var met = ["c1", "c2", "c3", "c4", "c5"].filter(function (k) { return a[k]; }).length;
+    if (met === 5) return { complete: true, score: "5/5", unit: "met", level: "ok", label: "Imaging not required", detail: "All five low-risk criteria met", summary: "NEXUS: all 5 low-risk criteria met — imaging not required" };
+    return { complete: true, score: met + "/5", unit: "met", level: "warn", label: "Imaging indicated", detail: (5 - met) + " criteria not met", summary: "NEXUS: " + met + "/5 low-risk criteria met — imaging indicated" };
+  },
+  refs: ["Hoffman JR, Mower WR, Wolfson AB, et al. Validity of a set of clinical criteria to rule out injury to the cervical spine in patients with blunt trauma. N Engl J Med 2000;343:94–99."]
+},
+pickCalc({
+  id: "odontoid", abbr: "DENS", name: "Odontoid fracture (Anderson–D'Alonzo, Grauer)", cat: "Spine trauma",
+  desc: "Type I–III dens fractures with type II subtypes", keywords: "odontoid dens c2 fracture anderson dalonzo grauer", intro: "Classify on CT.", unit: "type",
+  items: [{ id: "t", label: "Fracture pattern", options: [
+    P("I", "Type I — Avulsion of the dens tip", "Above the transverse ligament", "ok"),
+    P("IIA", "Type IIA — Non-displaced fracture through the dens base", "Grauer subtype", "warn", "IIA"),
+    P("IIB", "Type IIB — Displaced transverse, or oblique anterior-superior to posterior-inferior", "Orientation suits anterior screw fixation", "warn", "IIB"),
+    P("IIC", "Type IIC — Oblique anterior-inferior to posterior-superior, or comminuted", "Not suited to anterior screw fixation", "warn", "IIC"),
+    P("III", "Type III — Fracture extends into the C2 body", "Usually heals with external immobilisation", "info")] }],
+  refs: ["Anderson LD, D'Alonzo RT. Fractures of the odontoid process of the axis. J Bone Joint Surg Am 1974;56:1663–1674.", "Grauer JN, Shafi B, Hilibrand AS, et al. Proposal of a modified, treatment-oriented classification of odontoid fractures. Spine J 2005;5:123–129."]
+}),
+pickCalc({
+  id: "hangman", abbr: "C2", name: "Hangman's fracture (Levine–Edwards)", cat: "Spine trauma",
+  desc: "Traumatic spondylolisthesis of C2", keywords: "hangman c2 pars traumatic spondylolisthesis levine edwards effendi", intro: "Classify on CT and lateral imaging.", unit: "type",
+  items: [{ id: "t", label: "Pattern", options: [
+    P("I", "Type I", "< 3 mm translation, no angulation; stable", "ok"),
+    P("II", "Type II", "> 3 mm translation with significant angulation", "warn"),
+    P("IIA", "Type IIA", "Severe angulation with minimal translation (flexion-distraction); avoid traction", "warn"),
+    P("III", "Type III", "Type II with bilateral C2–C3 facet dislocation", "crit")] }],
+  refs: ["Levine AM, Edwards CC. The management of traumatic spondylolisthesis of the axis. J Bone Joint Surg Am 1985;67:217–226."]
+}),
+{
+  id: "powers", abbr: "BC/OA", name: "Powers ratio", cat: "Spine trauma",
+  desc: "Screen for anterior atlanto-occipital dislocation", keywords: "atlanto-occipital dislocation craniocervical powers ratio basion opisthion",
+  intro: "Measure on a midsagittal CT or lateral radiograph.",
+  items: [{ id: "m", type: "numbers", label: "Measurements (mm)", fields: [
+    { id: "bc", label: "BC: basion to posterior arch of C1" },
+    { id: "oa", label: "OA: opisthion to anterior arch of C1" }] }],
+  compute: function (a) {
+    var bc = num(a, "bc"), oa = num(a, "oa");
+    if (!bc || !oa) return { complete: false, remaining: (bc ? 0 : 1) + (oa ? 0 : 1) };
+    var r = bc / oa;
+    var s = r.toFixed(2);
+    return r > 1
+      ? { complete: true, score: s, unit: "ratio", level: "crit", label: "Suggests anterior AOD", detail: "Ratio > 1", summary: "Powers ratio " + s + " (> 1, suggests anterior atlanto-occipital dislocation)" }
+      : { complete: true, score: s, unit: "ratio", level: "ok", label: "Within normal range", detail: "Ratio ≤ 1", summary: "Powers ratio " + s + " (≤ 1)" };
+  },
+  notes: ["The ratio misses longitudinal and posterior dislocations. Check the basion–dens interval and the occipital condyle–C1 interval too."],
+  refs: ["Powers B, Miller MD, Kramer RS, et al. Traumatic anterior atlanto-occipital dislocation. Neurosurgery 1979;4:12–17."]
+},
+
+/* ================= NEUROSURGERY: SPINE DEGENERATIVE ================= */
+pickCalc({
+  id: "nurick", abbr: "Nurick", name: "Nurick grade", cat: "Spine: degenerative",
+  desc: "Walking disability in cervical myelopathy", keywords: "myelopathy cervical gait walking nurick dcm", intro: "Based on gait and employment.", unit: "Nurick",
+  items: [{ id: "g", label: "Grade", options: [
+    P(0, "Grade 0", "Root signs or symptoms, no evidence of cord disease", "ok"),
+    P(1, "Grade 1", "Signs of cord disease, no difficulty walking", "ok"),
+    P(2, "Grade 2", "Slight difficulty walking; does not prevent full-time work", "warn"),
+    P(3, "Grade 3", "Walking difficulty prevents full-time work or all housework; walks without help", "warn"),
+    P(4, "Grade 4", "Walks only with someone's help or a walking frame", "crit"),
+    P(5, "Grade 5", "Chair-bound or bedridden", "crit")] }],
+  refs: ["Nurick S. The pathogenesis of the spinal cord disorder associated with cervical spondylosis. Brain 1972;95:87–100."]
+}),
+{
+  id: "meyerding", abbr: "Slip", name: "Meyerding spondylolisthesis grade", cat: "Spine: degenerative",
+  desc: "Slip percentage and grade", keywords: "spondylolisthesis slip grade meyerding listhesis",
+  intro: "Measure on a lateral radiograph or sagittal CT.",
+  items: [{ id: "m", type: "numbers", label: "Measurements (mm)", fields: [
+    { id: "slip", label: "Slip: posterior offset of the upper vertebra" },
+    { id: "width", label: "AP width of the lower vertebra's upper endplate" }] }],
+  compute: function (a) {
+    var s = num(a, "slip"), w = num(a, "width");
+    if (!s || !w) return { complete: false, remaining: (s ? 0 : 1) + (w ? 0 : 1) };
+    var p = s / w * 100;
+    var g = p <= 25 ? ["I", "ok"] : p <= 50 ? ["II", "warn"] : p <= 75 ? ["III", "crit"] : p <= 100 ? ["IV", "crit"] : ["V", "crit"];
+    return { complete: true, score: g[0], unit: "Meyerding", level: g[1], label: "Slip " + p.toFixed(0) + "%",
+      detail: g[0] === "V" ? "Spondyloptosis (> 100%)" : "I ≤ 25% · II 26–50% · III 51–75% · IV 76–100%",
+      summary: "Meyerding grade " + g[0] + " (slip " + p.toFixed(0) + "%)" };
+  },
+  refs: ["Meyerding HW. Spondylolisthesis. Surg Gynecol Obstet 1932;54:371–377."]
+},
+pickCalc({
+  id: "pfirrmann", abbr: "Pfirr", name: "Pfirrmann disc degeneration grade", cat: "Spine: degenerative",
+  desc: "MRI grade of lumbar disc degeneration", keywords: "disc degeneration mri t2 pfirrmann lumbar", intro: "Grade the disc on sagittal T2-weighted MRI.", unit: "grade",
+  items: [{ id: "g", label: "Disc appearance on T2", options: [
+    P("I", "Grade I", "Homogeneous, bright white; clear nucleus–annulus distinction; normal height", "ok"),
+    P("II", "Grade II", "Inhomogeneous, with or without horizontal bands; clear distinction; normal height", "ok"),
+    P("III", "Grade III", "Inhomogeneous, grey; unclear distinction; normal to slightly reduced height", "warn"),
+    P("IV", "Grade IV", "Inhomogeneous, grey to black; distinction lost; normal to moderately reduced height", "warn"),
+    P("V", "Grade V", "Inhomogeneous, black; distinction lost; collapsed disc space", "crit")] }],
+  refs: ["Pfirrmann CW, Metzdorf A, Zanetti M, et al. Magnetic resonance classification of lumbar intervertebral disc degeneration. Spine 2001;26:1873–1878."]
+}),
+pickCalc({
+  id: "modic", abbr: "Modic", name: "Modic endplate changes", cat: "Spine: degenerative",
+  desc: "Vertebral endplate marrow signal on MRI", keywords: "modic endplate marrow mri t1 t2 degenerative", intro: "Compare the endplate marrow signal on T1 and T2.", unit: "type",
+  items: [{ id: "t", label: "Signal pattern", options: [
+    P(1, "Type 1 — T1 low, T2 high", "Bone marrow oedema and inflammation", "warn"),
+    P(2, "Type 2 — T1 high, T2 iso or high", "Fatty marrow replacement", "info"),
+    P(3, "Type 3 — T1 low, T2 low", "Subchondral sclerosis", "info")] }],
+  notes: ["Type 1 changes can mimic early discitis; correlate with clinical findings, inflammatory markers and contrast imaging."],
+  refs: ["Modic MT, Steinberg PM, Ross JS, et al. Degenerative disk disease: assessment of changes in vertebral body marrow with MR imaging. Radiology 1988;166:193–199."]
+}),
+
+/* ================= NEUROSURGERY: NEURO-ONCOLOGY & SKULL BASE ================= */
+pickCalc({
+  id: "kps", abbr: "KPS", name: "Karnofsky Performance Status", cat: "Neuro-oncology & skull base",
+  desc: "Functional status from 100 to 0", keywords: "karnofsky performance status kps oncology function", intro: "Choose the description that fits best.", unit: "KPS",
+  items: [{ id: "k", label: "Functional status", options: [
+    P(100, "100", "Normal; no complaints or evidence of disease", "ok"),
+    P(90, "90", "Normal activity; minor signs or symptoms", "ok"),
+    P(80, "80", "Normal activity with effort; some signs or symptoms", "ok"),
+    P(70, "70", "Cares for self; unable to carry on normal activity or active work", "warn"),
+    P(60, "60", "Needs occasional assistance; cares for most personal needs", "warn"),
+    P(50, "50", "Needs considerable assistance and frequent medical care", "warn"),
+    P(40, "40", "Disabled; needs special care and assistance", "crit"),
+    P(30, "30", "Severely disabled; hospital admission indicated, death not imminent", "crit"),
+    P(20, "20", "Very sick; hospital admission and active supportive treatment needed", "crit"),
+    P(10, "10", "Moribund; fatal processes progressing rapidly", "crit"),
+    P(0, "0", "Dead", "crit")] }],
+  refs: ["Karnofsky DA, Burchenal JH. The clinical evaluation of chemotherapeutic agents in cancer. In: MacLeod CM, ed. Evaluation of Chemotherapeutic Agents. Columbia University Press; 1949:191–205."]
+}),
+pickCalc({
+  id: "ecog", abbr: "ECOG", name: "ECOG performance status", cat: "Neuro-oncology & skull base",
+  desc: "Performance status 0–5", keywords: "ecog who zubrod performance status oncology", intro: "Choose the grade that fits best.", unit: "ECOG",
+  items: [{ id: "g", label: "Grade", options: [
+    P(0, "0", "Fully active, no restrictions", "ok"),
+    P(1, "1", "Restricted in strenuous activity; ambulatory, able to do light work", "ok"),
+    P(2, "2", "Ambulatory and capable of self-care; unable to work; up > 50% of waking hours", "warn"),
+    P(3, "3", "Limited self-care; in bed or chair > 50% of waking hours", "crit"),
+    P(4, "4", "Completely disabled; no self-care; confined to bed or chair", "crit"),
+    P(5, "5", "Dead", "crit")] }],
+  refs: ["Oken MM, Creech RH, Tormey DC, et al. Toxicity and response criteria of the Eastern Cooperative Oncology Group. Am J Clin Oncol 1982;5:649–655."]
+}),
+{
+  id: "rpa", abbr: "RPA", name: "RTOG RPA class (brain metastases)", cat: "Neuro-oncology & skull base",
+  desc: "Recursive partitioning analysis class", keywords: "brain metastases rpa rtog recursive partitioning survival",
+  intro: "Uses KPS, age, primary tumour control and extracranial disease.",
+  items: [
+    { id: "kps", label: "KPS", options: [opt("ge70", "≥ 70"), opt("lt70", "< 70")] },
+    { id: "age", label: "Age", options: [opt("lt65", "< 65 years"), opt("ge65", "≥ 65 years")], when: function (a) { return a.kps === "ge70"; } },
+    { id: "prim", label: "Primary tumour", options: [opt("ctrl", "Controlled"), opt("unc", "Uncontrolled")], when: function (a) { return a.kps === "ge70"; } },
+    { id: "ecm", label: "Extracranial metastases", options: [opt("no", "None"), opt("yes", "Present")], when: function (a) { return a.kps === "ge70"; } }
+  ],
+  compute: function (a) {
+    if (a.kps === undefined) return { complete: false, remaining: 1 };
+    if (a.kps === "lt70") return { complete: true, score: "III", unit: "RPA", level: "crit", label: "Median survival 2.3 months", detail: "KPS < 70", summary: "RTOG RPA class III" };
+    var n = missing(a, ["age", "prim", "ecm"]);
+    if (n) return { complete: false, remaining: n };
+    if (a.age === "lt65" && a.prim === "ctrl" && a.ecm === "no") return { complete: true, score: "I", unit: "RPA", level: "ok", label: "Median survival 7.1 months", detail: "KPS ≥ 70, age < 65, controlled primary, brain-only disease", summary: "RTOG RPA class I" };
+    return { complete: true, score: "II", unit: "RPA", level: "warn", label: "Median survival 4.2 months", detail: "KPS ≥ 70 but not class I", summary: "RTOG RPA class II" };
+  },
+  notes: ["Survival figures come from patients treated with whole-brain radiotherapy in the 1990s; modern systemic therapy has improved them."],
+  refs: ["Gaspar L, Scott C, Rotman M, et al. Recursive partitioning analysis (RPA) of prognostic factors in three RTOG brain metastases trials. Int J Radiat Oncol Biol Phys 1997;37:745–751."]
+},
+sumCalc({
+  id: "gpa", abbr: "GPA", name: "Graded Prognostic Assessment (brain metastases)", cat: "Neuro-oncology & skull base",
+  desc: "Original GPA with median survival", keywords: "brain metastases gpa sperduto survival prognosis", intro: "Original 2008 GPA. Diagnosis-specific GPA versions now exist for each primary tumour.", outOf: 4,
+  items: [
+    { id: "age", label: "Age", options: [opt("gt60", "> 60 years", 0), opt("50-60", "50–60 years", 0.5), opt("lt50", "< 50 years", 1)] },
+    { id: "kps", label: "KPS", options: [opt("lt70", "< 70", 0), opt("70-80", "70–80", 0.5), opt("90-100", "90–100", 1)] },
+    { id: "n", label: "Number of brain metastases", options: [opt("gt3", "> 3", 0), opt("2-3", "2–3", 0.5), opt("1", "1", 1)] },
+    { id: "ecm", label: "Extracranial metastases", options: [opt("yes", "Present", 0), opt("no", "None", 1)] }
+  ],
+  bands: [[1, "Median survival 2.6 months", "crit"], [2.5, "Median survival 3.8 months", "warn"], [3, "Median survival 6.9 months", "warn"], [4, "Median survival 11.0 months", "ok"]],
+  post: function (r) { r.detail = "RTOG database (Sperduto 2008)"; },
+  refs: ["Sperduto PW, Berkey B, Gaspar LE, et al. A new prognostic index and comparison to three other indices for patients with brain metastases. Int J Radiat Oncol Biol Phys 2008;70:510–514."]
+}),
+pickCalc({
+  id: "simpson", abbr: "Simp", name: "Simpson grade (meningioma resection)", cat: "Neuro-oncology & skull base",
+  desc: "Extent of meningioma resection", keywords: "meningioma resection extent simpson recurrence", intro: "Grade from the operative findings.", unit: "Simpson",
+  items: [{ id: "g", label: "Extent of removal", options: [
+    P("I", "Grade I", "Macroscopically complete, with excision of dural attachment and abnormal bone", "ok"),
+    P("II", "Grade II", "Macroscopically complete, with coagulation of dural attachment", "ok"),
+    P("III", "Grade III", "Macroscopically complete, without resection or coagulation of dural attachment or extradural extension", "warn"),
+    P("IV", "Grade IV", "Partial removal, tumour left in situ", "crit"),
+    P("V", "Grade V", "Simple decompression, with or without biopsy", "crit")] }],
+  refs: ["Simpson D. The recurrence of intracranial meningiomas after surgical treatment. J Neurol Neurosurg Psychiatry 1957;20:22–39."]
+}),
+pickCalc({
+  id: "koos", abbr: "Koos", name: "Koos grade (vestibular schwannoma)", cat: "Neuro-oncology & skull base",
+  desc: "Extension into the cerebellopontine angle", keywords: "vestibular schwannoma acoustic neuroma koos cpa", intro: "Grade on MRI.", unit: "Koos",
+  items: [{ id: "g", label: "Extension", options: [
+    P("I", "Grade I", "Intracanalicular", "ok"),
+    P("II", "Grade II", "Into the CPA, no brainstem contact", "ok"),
+    P("III", "Grade III", "Fills the CPA cistern and contacts the brainstem, no displacement", "warn"),
+    P("IV", "Grade IV", "Displaces the brainstem and cranial nerves", "crit")] }],
+  refs: ["Koos WT, Day JD, Matula C, Levy DI. Neurotopographic considerations in the microsurgical treatment of small acoustic neurinomas. J Neurosurg 1998;88:506–512."]
+}),
+pickCalc({
+  id: "house-brackmann", abbr: "H-B", name: "House–Brackmann facial nerve grade", cat: "Neuro-oncology & skull base",
+  desc: "Facial nerve function I–VI", keywords: "facial nerve palsy house brackmann bell schwannoma", intro: "Assess at rest and with movement.", unit: "H-B",
+  items: [{ id: "g", label: "Facial function", options: [
+    P("I", "Grade I — Normal", "Normal function in all areas", "ok"),
+    P("II", "Grade II — Slight dysfunction", "Slight weakness on close inspection; normal symmetry at rest; complete eye closure with minimal effort", "ok"),
+    P("III", "Grade III — Moderate dysfunction", "Obvious but not disfiguring asymmetry; complete eye closure with effort", "warn"),
+    P("IV", "Grade IV — Moderately severe dysfunction", "Obvious weakness or disfiguring asymmetry; incomplete eye closure", "warn"),
+    P("V", "Grade V — Severe dysfunction", "Barely perceptible motion; asymmetry at rest", "crit"),
+    P("VI", "Grade VI — Total paralysis", "No movement", "crit")] }],
+  refs: ["House JW, Brackmann DE. Facial nerve grading system. Otolaryngol Head Neck Surg 1985;93:146–147."]
+}),
+pickCalc({
+  id: "knosp", abbr: "Knosp", name: "Knosp grade (pituitary adenoma)", cat: "Neuro-oncology & skull base",
+  desc: "Cavernous sinus invasion on coronal MRI", keywords: "pituitary adenoma cavernous sinus invasion knosp", intro: "Use the coronal MRI lines tangent to the intracavernous and supraclinoid carotid.", unit: "Knosp",
+  items: [{ id: "g", label: "Lateral extension", options: [
+    P("0", "Grade 0", "Does not pass the medial tangent", "ok", undefined, "Invasion unlikely"),
+    P("1", "Grade 1", "Passes the medial tangent but not the intercarotid line", "ok", undefined, "Invasion unlikely"),
+    P("2", "Grade 2", "Passes the intercarotid line but not the lateral tangent", "warn", undefined, "Invasion possible"),
+    P("3A", "Grade 3A", "Beyond the lateral tangent into the superior compartment", "crit", undefined, "Invasion likely"),
+    P("3B", "Grade 3B", "Beyond the lateral tangent into the inferior compartment", "crit", undefined, "Invasion likely"),
+    P("4", "Grade 4", "Total encasement of the intracavernous carotid", "crit", undefined, "Invasion present")] }],
+  refs: ["Knosp E, Steiner E, Kitz K, Matula C. Pituitary adenomas with invasion of the cavernous sinus space. Neurosurgery 1993;33:610–618.", "Micko AS, Wöhrer A, Wolfsberger S, Knosp E. Invasion of the cavernous sinus space in pituitary adenomas: endoscopic verification and its correlation with an MRI-based classification. J Neurosurg 2015;122:803–811."]
+}),
+
+/* ================= NEUROSURGERY: HYDROCEPHALUS & SUBDURAL ================= */
+{
+  id: "evans", abbr: "EI", name: "Evans index", cat: "Hydrocephalus & subdural",
+  desc: "Frontal horn ratio for ventriculomegaly", keywords: "hydrocephalus nph ventriculomegaly evans index frontal horns",
+  intro: "Measure on the same axial slice.",
+  items: [{ id: "m", type: "numbers", label: "Measurements (mm)", fields: [
+    { id: "fh", label: "Maximal width of the frontal horns" },
+    { id: "id", label: "Maximal inner diameter of the skull" }] }],
+  compute: function (a) {
+    var f = num(a, "fh"), d = num(a, "id");
+    if (!f || !d) return { complete: false, remaining: (f ? 0 : 1) + (d ? 0 : 1) };
+    var r = f / d, s = r.toFixed(2);
+    return r > 0.3
+      ? { complete: true, score: s, unit: "Evans", level: "warn", label: "Ventriculomegaly", detail: "Index > 0.3", summary: "Evans index " + s + " (> 0.3, ventriculomegaly)" }
+      : { complete: true, score: s, unit: "Evans", level: "ok", label: "Within normal range", detail: "Index ≤ 0.3", summary: "Evans index " + s + " (≤ 0.3)" };
+  },
+  notes: ["An index > 0.3 is required but not sufficient for NPH; add the callosal angle, DESH and clinical findings."],
+  refs: ["Evans WA. An encephalographic ratio for estimating ventricular enlargement and cerebral atrophy. Arch Neurol Psychiatry 1942;47:931–937."]
+},
+pickCalc({
+  id: "markwalder", abbr: "MGS", name: "Markwalder grade (chronic SDH)", cat: "Hydrocephalus & subdural",
+  desc: "Neurological grade in chronic subdural haematoma", keywords: "chronic subdural hematoma haematoma csdh markwalder", intro: "Grade the clinical state on admission.", unit: "Markwalder",
+  items: [{ id: "g", label: "Clinical state", options: [
+    P(0, "Grade 0", "Neurologically normal", "ok"),
+    P(1, "Grade 1", "Alert and oriented; mild symptoms such as headache, or absent or mild deficit such as reflex asymmetry", "ok"),
+    P(2, "Grade 2", "Drowsy or disoriented, with variable deficits such as hemiparesis", "warn"),
+    P(3, "Grade 3", "Stuporous but responds appropriately to noxious stimuli; severe focal signs such as hemiplegia", "crit"),
+    P(4, "Grade 4", "Comatose, no motor response to pain; decerebrate or decorticate posturing", "crit")] }],
+  refs: ["Markwalder TM, Steinsiepe KF, Rohner M, et al. The course of chronic subdural hematomas after burr-hole craniostomy and closed-system drainage. J Neurosurg 1981;55:390–396."]
+}),
+
+/* ================= NEUROLOGY: STROKE, TIA & SAH ================= */
+sumCalc({
+  id: "nihss", abbr: "NIHSS", name: "NIH Stroke Scale", cat: "Stroke, TIA & SAH",
+  desc: "Stroke severity, 0–42", keywords: "nihss stroke severity thrombolysis thrombectomy nih", intro: "Score what the patient does on the first attempt. Mark UN only for amputation, joint fusion or intubation where stated.", outOf: 42,
+  items: [
+    { id: "1a", label: "1a. Level of consciousness", options: [opt(0, "Alert", 0), opt(1, "Not alert; arousable by minor stimulation", 1), opt(2, "Not alert; needs repeated or strong stimulation", 2), opt(3, "Unresponsive or reflex responses only", 3)] },
+    { id: "1b", label: "1b. LOC questions (month, age)", options: [opt(0, "Both correct", 0), opt(1, "One correct", 1), opt(2, "Neither correct", 2)] },
+    { id: "1c", label: "1c. LOC commands (open/close eyes, grip/release)", options: [opt(0, "Both correct", 0), opt(1, "One correct", 1), opt(2, "Neither correct", 2)] },
+    { id: "2", label: "2. Best gaze", options: [opt(0, "Normal", 0), opt(1, "Partial gaze palsy", 1), opt(2, "Forced deviation or total gaze paresis", 2)] },
+    { id: "3", label: "3. Visual fields", options: [opt(0, "No visual loss", 0), opt(1, "Partial hemianopia", 1), opt(2, "Complete hemianopia", 2), opt(3, "Bilateral hemianopia (including cortical blindness)", 3)] },
+    { id: "4", label: "4. Facial palsy", options: [opt(0, "Normal", 0), opt(1, "Minor paralysis", 1), opt(2, "Partial paralysis", 2), opt(3, "Complete paralysis of one or both sides", 3)] },
+    { id: "5a", label: "5a. Motor arm — left", options: [opt(0, "No drift for 10 s", 0), opt(1, "Drift", 1), opt(2, "Some effort against gravity", 2), opt(3, "No effort against gravity; limb falls", 3), opt(4, "No movement", 4), opt("UN", "UN — amputation or joint fusion", null)] },
+    { id: "5b", label: "5b. Motor arm — right", options: [opt(0, "No drift for 10 s", 0), opt(1, "Drift", 1), opt(2, "Some effort against gravity", 2), opt(3, "No effort against gravity; limb falls", 3), opt(4, "No movement", 4), opt("UN", "UN — amputation or joint fusion", null)] },
+    { id: "6a", label: "6a. Motor leg — left", options: [opt(0, "No drift for 5 s", 0), opt(1, "Drift", 1), opt(2, "Some effort against gravity", 2), opt(3, "No effort against gravity", 3), opt(4, "No movement", 4), opt("UN", "UN — amputation or joint fusion", null)] },
+    { id: "6b", label: "6b. Motor leg — right", options: [opt(0, "No drift for 5 s", 0), opt(1, "Drift", 1), opt(2, "Some effort against gravity", 2), opt(3, "No effort against gravity", 3), opt(4, "No movement", 4), opt("UN", "UN — amputation or joint fusion", null)] },
+    { id: "7", label: "7. Limb ataxia", options: [opt(0, "Absent", 0), opt(1, "Present in one limb", 1), opt(2, "Present in two limbs", 2), opt("UN", "UN — amputation or joint fusion", null)] },
+    { id: "8", label: "8. Sensory", options: [opt(0, "Normal", 0), opt(1, "Mild to moderate loss", 1), opt(2, "Severe to total loss", 2)] },
+    { id: "9", label: "9. Best language", options: [opt(0, "No aphasia", 0), opt(1, "Mild to moderate aphasia", 1), opt(2, "Severe aphasia", 2), opt(3, "Mute, global aphasia", 3)] },
+    { id: "10", label: "10. Dysarthria", options: [opt(0, "Normal", 0), opt(1, "Mild to moderate", 1), opt(2, "Severe: unintelligible or mute", 2), opt("UN", "UN — intubated or other physical barrier", null)] },
+    { id: "11", label: "11. Extinction and inattention", options: [opt(0, "No abnormality", 0), opt(1, "Inattention or extinction in one modality", 1), opt(2, "Profound hemi-inattention, or extinction in more than one modality", 2)] }
+  ],
+  bands: [[0, "No stroke symptoms", "ok"], [4, "Minor stroke", "ok"], [15, "Moderate stroke", "warn"], [20, "Moderate to severe stroke", "crit"], [42, "Severe stroke", "crit"]],
+  post: function (r, a) {
+    var un = ["5a", "5b", "6a", "6b", "7", "10"].filter(function (k) { return a[k] === "UN"; }).length;
+    r.detail = un ? un + " item(s) marked UN and not scored" : "1–4 minor · 5–15 moderate · 16–20 moderate–severe · 21–42 severe";
+  },
+  refs: ["Brott T, Adams HP Jr, Olinger CP, et al. Measurements of acute cerebral infarction: a clinical examination scale. Stroke 1989;20:864–870."]
+}),
+pickCalc({
+  id: "mrs", abbr: "mRS", name: "Modified Rankin Scale", cat: "Stroke, TIA & SAH",
+  desc: "Global disability after stroke, 0–6", keywords: "modified rankin scale mrs disability outcome stroke", intro: "Choose the level that fits the patient's current function.", unit: "mRS",
+  items: [{ id: "g", label: "Function", options: [
+    P(0, "0 — No symptoms", "", "ok"),
+    P(1, "1 — No significant disability", "Able to carry out all usual activities despite some symptoms", "ok"),
+    P(2, "2 — Slight disability", "Able to look after own affairs without help, but cannot do all previous activities", "ok"),
+    P(3, "3 — Moderate disability", "Needs some help, but walks without assistance", "warn"),
+    P(4, "4 — Moderately severe disability", "Unable to walk or attend to bodily needs without assistance", "crit"),
+    P(5, "5 — Severe disability", "Bedridden, incontinent, needs constant nursing care", "crit"),
+    P(6, "6 — Dead", "", "crit")] }],
+  notes: ["mRS 0–2 is usually reported as functional independence."],
+  refs: ["van Swieten JC, Koudstaal PJ, Visser MC, et al. Interobserver agreement for the assessment of handicap in stroke patients. Stroke 1988;19:604–607."]
+}),
+sumCalc({
+  id: "abcd2", abbr: "ABCD²", name: "ABCD² score", cat: "Stroke, TIA & SAH",
+  desc: "Early stroke risk after TIA", keywords: "tia transient ischemic attack stroke risk abcd2 johnston", intro: "For patients with a suspected TIA.", outOf: 7,
+  items: [
+    { id: "age", label: "Age", options: [opt("lt60", "< 60 years", 0), opt("ge60", "≥ 60 years", 1)] },
+    { id: "bp", label: "Blood pressure at first assessment", options: [opt("n", "< 140/90 mmHg", 0), opt("h", "≥ 140/90 mmHg", 1)] },
+    { id: "cf", label: "Clinical features", options: [opt("w", "Unilateral weakness", 2), opt("s", "Speech disturbance without weakness", 1), opt("o", "Other", 0)] },
+    { id: "dur", label: "Duration", options: [opt("ge60", "≥ 60 minutes", 2), opt("10-59", "10–59 minutes", 1), opt("lt10", "< 10 minutes", 0)] },
+    { id: "dm", label: "Diabetes", options: [opt("no", "No", 0), opt("yes", "Yes", 1)] }
+  ],
+  bands: [[3, "Low risk: 2-day stroke risk 1.0%", "ok"], [5, "Moderate risk: 2-day stroke risk 4.1%", "warn"], [7, "High risk: 2-day stroke risk 8.1%", "crit"]],
+  post: function (r) { r.detail = "Validation cohorts (Johnston 2007)"; },
+  notes: ["A low score does not rule out a high-risk cause such as carotid stenosis or atrial fibrillation."],
+  refs: ["Johnston SC, Rothwell PM, Nguyen-Huynh MN, et al. Validation and refinement of scores to predict very early stroke risk after transient ischaemic attack. Lancet 2007;369:283–292."]
+}),
+{
+  id: "cha2ds2", abbr: "CHA₂DS₂", name: "CHA₂DS₂-VASc / CHA₂DS₂-VA", cat: "Stroke, TIA & SAH",
+  desc: "Stroke risk in atrial fibrillation", keywords: "atrial fibrillation af anticoagulation stroke risk chads chads2 vasc va",
+  intro: "Choose age and sex, then tick each condition present.",
+  items: [
+    { id: "age", label: "Age", options: [opt("lt65", "< 65 years", 0), opt("65-74", "65–74 years", 1), opt("ge75", "≥ 75 years", 2)] },
+    { id: "sex", label: "Sex", options: [opt("m", "Male", 0), opt("f", "Female", 1)] },
+    { id: "rf", type: "checks", label: "Conditions present", checks: [
+      { id: "chf", label: "Congestive heart failure", pts: 1 },
+      { id: "htn", label: "Hypertension", pts: 1 },
+      { id: "dm", label: "Diabetes", pts: 1 },
+      { id: "stroke", label: "Prior stroke, TIA or thromboembolism", pts: 2 },
+      { id: "vasc", label: "Vascular disease", sub: "Prior MI, peripheral artery disease or aortic plaque", pts: 1 }] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["age", "sex"]);
+    if (n) return { complete: false, remaining: n };
+    var va = sumPts(this, a, ["age"]);
+    ["chf", "htn", "dm", "vasc"].forEach(function (k) { if (a[k]) va += 1; });
+    if (a.stroke) va += 2;
+    var vasc = va + (a.sex === "f" ? 1 : 0);
+    var r = va >= 2 ? ["Oral anticoagulation recommended", "crit"] : va === 1 ? ["Oral anticoagulation should be considered", "warn"] : ["No anticoagulation indicated by score", "ok"];
+    return { complete: true, score: va, unit: "CHA₂DS₂-VA", level: r[1], label: r[0],
+      detail: "CHA₂DS₂-VASc = " + vasc + " · thresholds per 2024 ESC (CHA₂DS₂-VA)",
+      summary: "CHA2DS2-VA " + va + ", CHA2DS2-VASc " + vasc + " (" + r[0].toLowerCase() + ")" };
+  },
+  notes: ["2024 ESC guidelines use CHA₂DS₂-VA (without sex). With CHA₂DS₂-VASc, US guidelines recommend anticoagulation at ≥ 2 in men and ≥ 3 in women.", "After an intracerebral haemorrhage the decision needs specialist input regardless of the score."],
+  refs: ["Lip GY, Nieuwlaat R, Pisters R, et al. Refining clinical risk stratification for predicting stroke and thromboembolism in atrial fibrillation. Chest 2010;137:263–272.", "Van Gelder IC, Rienstra M, Bunting KV, et al. 2024 ESC Guidelines for the management of atrial fibrillation. Eur Heart J 2024;45:3314–3414."]
+},
+sumCalc({
+  id: "has-bled", abbr: "HAS-BLED", name: "HAS-BLED", cat: "Stroke, TIA & SAH",
+  desc: "Bleeding risk on anticoagulation", keywords: "bleeding risk anticoagulation atrial fibrillation hasbled", intro: "Tick each item present. Each counts 1 point.", outOf: 9,
+  items: [{ id: "hb", type: "checks", label: "Risk factors", checks: [
+    { id: "h", label: "Hypertension", sub: "Uncontrolled, systolic > 160 mmHg", pts: 1 },
+    { id: "ren", label: "Abnormal renal function", sub: "Dialysis, transplant, creatinine ≥ 200 µmol/L", pts: 1 },
+    { id: "liv", label: "Abnormal liver function", sub: "Cirrhosis, or bilirubin > 2× and AST/ALT > 3× normal", pts: 1 },
+    { id: "s", label: "Stroke history", pts: 1 },
+    { id: "b", label: "Bleeding history or predisposition", pts: 1 },
+    { id: "l", label: "Labile INR", sub: "Time in therapeutic range < 60%", pts: 1 },
+    { id: "e", label: "Elderly, age > 65", pts: 1 },
+    { id: "d", label: "Drugs: antiplatelets or NSAIDs", pts: 1 },
+    { id: "al", label: "Alcohol, ≥ 8 drinks a week", pts: 1 }] }],
+  bands: [[2, "Low to moderate bleeding risk", "ok"], [9, "High bleeding risk", "crit"]],
+  post: function (r, a, t) { r.detail = t >= 3 ? "Correct modifiable factors and review often; a high score alone is not a reason to withhold anticoagulation" : "Review modifiable factors"; },
+  refs: ["Pisters R, Lane DA, Nieuwlaat R, et al. A novel user-friendly score (HAS-BLED) to assess 1-year risk of major bleeding in patients with atrial fibrillation. Chest 2010;138:1093–1100."]
+}),
+{
+  id: "aspects", abbr: "ASPECTS", name: "ASPECTS", cat: "Stroke, TIA & SAH",
+  desc: "Early ischaemic change in the MCA territory on CT", keywords: "aspects alberta stroke program early ct score mca ischemia thrombectomy",
+  intro: "Start at 10 and tick each region with early ischaemic change (focal swelling or hypoattenuation).",
+  items: [{ id: "reg", type: "checks", label: "Regions with early ischaemic change", checks: [
+    { id: "C", label: "C — Caudate" }, { id: "L", label: "L — Lentiform nucleus" }, { id: "IC", label: "IC — Internal capsule" },
+    { id: "I", label: "I — Insular ribbon" }, { id: "M1", label: "M1 — Anterior MCA cortex" }, { id: "M2", label: "M2 — MCA cortex lateral to the insula" },
+    { id: "M3", label: "M3 — Posterior MCA cortex" }, { id: "M4", label: "M4 — Anterior MCA territory, superior" },
+    { id: "M5", label: "M5 — Lateral MCA territory, superior" }, { id: "M6", label: "M6 — Posterior MCA territory, superior" }] }],
+  compute: function (a) {
+    var regs = ["C", "L", "IC", "I", "M1", "M2", "M3", "M4", "M5", "M6"];
+    var hit = regs.filter(function (k) { return a[k]; });
+    var s = 10 - hit.length;
+    return { complete: true, score: s, unit: "of 10", level: s >= 8 ? "ok" : s >= 6 ? "warn" : "crit",
+      label: s >= 6 ? "ASPECTS ≥ 6" : "ASPECTS ≤ 5: large ischaemic core",
+      detail: hit.length ? "Affected: " + hit.join(", ") : "No early ischaemic change",
+      summary: "ASPECTS " + s + (hit.length ? " (" + hit.join(", ") + ")" : "") };
+  },
+  notes: ["Standard thrombectomy criteria used ASPECTS ≥ 6; recent large-core trials also enrolled patients with ASPECTS 3–5. Follow your current guideline."],
+  refs: ["Barber PA, Demchuk AM, Zhang J, Buchan AM. Validity and reliability of a quantitative computed tomography score in predicting outcome of hyperacute stroke before thrombolytic therapy. Lancet 2000;355:1670–1674."]
+},
+sumCalc({
+  id: "rope", abbr: "RoPE", name: "RoPE score", cat: "Stroke, TIA & SAH",
+  desc: "Chance that a PFO caused a cryptogenic stroke", keywords: "pfo patent foramen ovale cryptogenic stroke paradoxical embolism rope", intro: "For cryptogenic stroke with a PFO.", outOf: 10,
+  items: [
+    { id: "htn", label: "History of hypertension", options: [opt("no", "No", 1), opt("yes", "Yes", 0)] },
+    { id: "dm", label: "History of diabetes", options: [opt("no", "No", 1), opt("yes", "Yes", 0)] },
+    { id: "st", label: "Prior stroke or TIA", options: [opt("no", "No", 1), opt("yes", "Yes", 0)] },
+    { id: "smk", label: "Current smoker", options: [opt("no", "No", 1), opt("yes", "Yes", 0)] },
+    { id: "cort", label: "Cortical infarct on imaging", options: [opt("yes", "Yes", 1), opt("no", "No", 0)] },
+    { id: "age", label: "Age", options: [opt("18-29", "18–29", 5), opt("30-39", "30–39", 4), opt("40-49", "40–49", 3), opt("50-59", "50–59", 2), opt("60-69", "60–69", 1), opt("ge70", "≥ 70", 0)] }
+  ],
+  bands: [[3, "PFO-attributable fraction 0%", "ok"], [4, "PFO-attributable fraction 38%", "warn"], [5, "PFO-attributable fraction 34%", "warn"], [6, "PFO-attributable fraction 62%", "warn"], [7, "PFO-attributable fraction 72%", "crit"], [8, "PFO-attributable fraction 84%", "crit"], [10, "PFO-attributable fraction 88%", "crit"]],
+  post: function (r) { r.detail = "Probability the stroke is due to the PFO (Kent 2013)"; },
+  refs: ["Kent DM, Ruthazer R, Weimar C, et al. An index to identify stroke-related vs incidental patent foramen ovale in cryptogenic stroke. Neurology 2013;81:619–625."]
+}),
+{
+  id: "ottawa-sah", abbr: "OSAH", name: "Ottawa SAH Rule", cat: "Stroke, TIA & SAH",
+  desc: "Who needs work-up for SAH in acute headache", keywords: "subarachnoid hemorrhage haemorrhage headache thunderclap decision rule perry",
+  intro: "For alert patients ≥ 15 years with new severe non-traumatic headache peaking within 1 hour.",
+  items: [
+    YN("age", "Age ≥ 40 years?"),
+    YN("neck", "Neck pain or stiffness?"),
+    YN("loc", "Witnessed loss of consciousness?"),
+    YN("ex", "Onset during exertion?"),
+    YN("tc", "Thunderclap headache (instantly peaking pain)?"),
+    YN("flex", "Limited neck flexion on examination?")
+  ],
+  compute: function (a) {
+    var ids = ["age", "neck", "loc", "ex", "tc", "flex"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var k = ids.filter(function (i) { return a[i] === "yes"; }).length;
+    return k ? { complete: true, score: k, unit: "criteria", level: "crit", label: "Investigate for SAH", detail: "At least one criterion present", summary: "Ottawa SAH Rule: " + k + " criteria — investigate for SAH" }
+      : { complete: true, score: 0, unit: "criteria", level: "ok", label: "SAH ruled out by the rule", detail: "No criteria present", summary: "Ottawa SAH Rule: no criteria — SAH ruled out by the rule" };
+  },
+  notes: ["Does not apply to new neurological deficits, previous aneurysm, SAH or brain tumour, or recurrent similar headaches (≥ 3 episodes over ≥ 6 months)."],
+  refs: ["Perry JJ, Stiell IG, Sivilotti ML, et al. Clinical decision rules to rule out subarachnoid hemorrhage for acute headache. JAMA 2013;310:1248–1255."]
+},
+
+/* ================= NEUROLOGY: NEUROMUSCULAR ================= */
+sumCalc({
+  id: "mrc-sum", abbr: "MRC-SS", name: "MRC sum score", cat: "Neuromuscular",
+  desc: "Global muscle strength, 0–60", keywords: "mrc medical research council sum score weakness icu gbs power", intro: "Grade each muscle group 0–5 on both sides.", outOf: 60, scale: SCALE_MRC,
+  items: [
+    { id: "sa_r", label: "Shoulder abduction — right" }, { id: "sa_l", label: "Shoulder abduction — left" },
+    { id: "ef_r", label: "Elbow flexion — right" }, { id: "ef_l", label: "Elbow flexion — left" },
+    { id: "we_r", label: "Wrist extension — right" }, { id: "we_l", label: "Wrist extension — left" },
+    { id: "hf_r", label: "Hip flexion — right" }, { id: "hf_l", label: "Hip flexion — left" },
+    { id: "ke_r", label: "Knee extension — right" }, { id: "ke_l", label: "Knee extension — left" },
+    { id: "ad_r", label: "Ankle dorsiflexion — right" }, { id: "ad_l", label: "Ankle dorsiflexion — left" }
+  ],
+  bands: [[35, "Severe weakness", "crit"], [47, "Significant weakness (ICU-acquired weakness < 48)", "warn"], [60, "No significant weakness", "ok"]],
+  refs: ["Kleyweg RP, van der Meché FG, Schmitz PI. Interobserver agreement in the assessment of muscle strength and functional abilities in Guillain-Barré syndrome. Muscle Nerve 1991;14:1103–1109.", "De Jonghe B, Sharshar T, Lefaucheur JP, et al. Paresis acquired in the intensive care unit. JAMA 2002;288:2859–2867."]
+}),
+pickCalc({
+  id: "hughes", abbr: "GBS-DS", name: "Hughes GBS disability scale", cat: "Neuromuscular",
+  desc: "Functional grade in Guillain–Barré syndrome", keywords: "guillain barre gbs disability hughes", intro: "Choose the grade that fits.", unit: "GBS-DS",
+  items: [{ id: "g", label: "Function", options: [
+    P(0, "0 — Healthy", "", "ok"),
+    P(1, "1 — Minor symptoms", "Able to run", "ok"),
+    P(2, "2 — Walks 10 m without assistance", "Unable to run", "warn"),
+    P(3, "3 — Walks 10 m with help", "Walking aid or support", "warn"),
+    P(4, "4 — Bed- or chair-bound", "", "crit"),
+    P(5, "5 — Needs assisted ventilation", "For at least part of the day", "crit"),
+    P(6, "6 — Dead", "", "crit")] }],
+  refs: ["Hughes RA, Newsom-Davis JM, Perkin GD, Pierce JM. Controlled trial of prednisolone in acute polyneuropathy. Lancet 1978;2:750–753."]
+}),
+pickCalc({
+  id: "mgfa", abbr: "MGFA", name: "MGFA clinical classification", cat: "Neuromuscular",
+  desc: "Myasthenia gravis severity class", keywords: "myasthenia gravis mgfa class ocular generalized crisis", intro: "Classify by the most severely affected muscles.", unit: "MGFA",
+  items: [{ id: "c", label: "Class", options: [
+    P("I", "Class I", "Ocular muscle weakness only; may include weakness of eye closure", "ok"),
+    P("IIa", "Class IIa", "Mild generalised weakness, predominantly limb or axial", "ok"),
+    P("IIb", "Class IIb", "Mild generalised weakness, predominantly oropharyngeal or respiratory", "warn"),
+    P("IIIa", "Class IIIa", "Moderate generalised weakness, predominantly limb or axial", "warn"),
+    P("IIIb", "Class IIIb", "Moderate generalised weakness, predominantly oropharyngeal or respiratory", "warn"),
+    P("IVa", "Class IVa", "Severe generalised weakness, predominantly limb or axial", "crit"),
+    P("IVb", "Class IVb", "Severe generalised weakness, predominantly oropharyngeal or respiratory; may include feeding tube without intubation", "crit"),
+    P("V", "Class V", "Intubation, with or without ventilation (not routine postoperative care)", "crit")] }],
+  refs: ["Jaretzki A 3rd, Barohn RJ, Ernstoff RM, et al. Myasthenia gravis: recommendations for clinical research standards. Neurology 2000;55:16–23."]
+}),
+sumCalc({
+  id: "mg-adl", abbr: "MG-ADL", name: "MG-ADL", cat: "Neuromuscular",
+  desc: "Myasthenia gravis activities of daily living, 0–24", keywords: "myasthenia gravis activities daily living mgadl", intro: "Ask about the past week.", outOf: 24,
+  items: [
+    { id: "talk", label: "Talking", options: [opt(0, "Normal", 0), opt(1, "Intermittent slurring or nasal speech", 1), opt(2, "Constant slurring or nasal, but understood", 2), opt(3, "Difficult to understand", 3)] },
+    { id: "chew", label: "Chewing", options: [opt(0, "Normal", 0), opt(1, "Fatigue with solid food", 1), opt(2, "Fatigue with soft food", 2), opt(3, "Gastric tube", 3)] },
+    { id: "swal", label: "Swallowing", options: [opt(0, "Normal", 0), opt(1, "Rare choking", 1), opt(2, "Frequent choking, diet changed", 2), opt(3, "Gastric tube", 3)] },
+    { id: "br", label: "Breathing", options: [opt(0, "Normal", 0), opt(1, "Short of breath with exertion", 1), opt(2, "Short of breath at rest", 2), opt(3, "Ventilator dependent", 3)] },
+    { id: "teeth", label: "Brushing teeth or combing hair", options: [opt(0, "No impairment", 0), opt(1, "Extra effort, no rest needed", 1), opt(2, "Rest periods needed", 2), opt(3, "Cannot do one of these", 3)] },
+    { id: "chair", label: "Rising from a chair", options: [opt(0, "No impairment", 0), opt(1, "Mild, sometimes uses arms", 1), opt(2, "Moderate, always uses arms", 2), opt(3, "Severe, needs assistance", 3)] },
+    { id: "dip", label: "Double vision", options: [opt(0, "None", 0), opt(1, "Occurs, but not daily", 1), opt(2, "Daily, but not constant", 2), opt(3, "Constant", 3)] },
+    { id: "ptosis", label: "Eyelid droop", options: [opt(0, "None", 0), opt(1, "Occurs, but not daily", 1), opt(2, "Daily, but not constant", 2), opt(3, "Constant", 3)] }
+  ],
+  bands: [[24, "MG-ADL total", "info"]],
+  post: function (r) { r.detail = "A fall of ≥ 2 points is usually taken as clinically meaningful"; },
+  refs: ["Wolfe GI, Herbelin L, Nations SP, et al. Myasthenia gravis activities of daily living profile. Neurology 1999;52:1487–1489."]
+}),
+
+/* ================= NEUROLOGY: MOVEMENT & TONE ================= */
+pickCalc({
+  id: "ashworth", abbr: "MAS", name: "Modified Ashworth Scale", cat: "Movement & tone",
+  desc: "Spasticity grade", keywords: "spasticity tone ashworth modified mas", intro: "Move the limb passively through its full range.", unit: "MAS",
+  items: [{ id: "g", label: "Resistance to passive movement", options: [
+    P("0", "0", "No increase in tone", "ok"),
+    P("1", "1", "Slight increase: catch and release, or minimal resistance at end of range", "ok"),
+    P("1+", "1+", "Slight increase: catch, then minimal resistance through less than half the range", "warn"),
+    P("2", "2", "Marked increase through most of the range, but the part moves easily", "warn"),
+    P("3", "3", "Considerable increase; passive movement difficult", "crit"),
+    P("4", "4", "Rigid in flexion or extension", "crit")] }],
+  refs: ["Bohannon RW, Smith MB. Interrater reliability of a modified Ashworth scale of muscle spasticity. Phys Ther 1987;67:206–207."]
+}),
+pickCalc({
+  id: "hoehn-yahr", abbr: "H&Y", name: "Hoehn and Yahr stage (modified)", cat: "Movement & tone",
+  desc: "Parkinson's disease stage", keywords: "parkinson disease stage hoehn yahr", intro: "Choose the stage that fits.", unit: "H&Y",
+  items: [{ id: "s", label: "Stage", options: [
+    P("0", "0", "No signs of disease", "ok"),
+    P("1", "1", "Unilateral disease", "ok"),
+    P("1.5", "1.5", "Unilateral plus axial involvement", "ok"),
+    P("2", "2", "Bilateral disease without impaired balance", "ok"),
+    P("2.5", "2.5", "Mild bilateral disease, recovers on the pull test", "warn"),
+    P("3", "3", "Mild to moderate bilateral disease; some postural instability; physically independent", "warn"),
+    P("4", "4", "Severe disability; still able to walk or stand unassisted", "crit"),
+    P("5", "5", "Wheelchair-bound or bedridden unless aided", "crit")] }],
+  refs: ["Hoehn MM, Yahr MD. Parkinsonism: onset, progression and mortality. Neurology 1967;17:427–442.", "Goetz CG, Poewe W, Rascol O, et al. Movement Disorder Society Task Force report on the Hoehn and Yahr staging scale. Mov Disord 2004;19:1020–1028."]
+}),
+
+/* ================= NEUROLOGY: SEIZURES & ICU ================= */
+sumCalc({
+  id: "stess", abbr: "STESS", name: "Status Epilepticus Severity Score", cat: "Seizures & ICU",
+  desc: "In-hospital mortality risk in status epilepticus", keywords: "status epilepticus severity stess rossetti mortality", intro: "Use findings before the first treatment.", outOf: 6,
+  items: [
+    { id: "cons", label: "Consciousness", options: [opt("alert", "Alert, somnolent or confused", 0), opt("stup", "Stuporous or comatose", 1)] },
+    { id: "type", label: "Worst seizure type", options: [opt("focal", "Focal, absence or myoclonic (in idiopathic generalised epilepsy)", 0), opt("gcse", "Generalised convulsive", 1), opt("ncse", "Non-convulsive status in coma", 2)] },
+    { id: "age", label: "Age", options: [opt("lt65", "< 65 years", 0), opt("ge65", "≥ 65 years", 2)] },
+    { id: "hx", label: "History of previous seizures", options: [opt("yes", "Yes", 0), opt("no", "No or unknown", 1)] }
+  ],
+  bands: [[2, "Favourable (score 0–2)", "ok"], [6, "Unfavourable (score ≥ 3)", "crit"]],
+  post: function (r) { r.detail = "Score ≥ 3 predicts higher in-hospital mortality"; },
+  refs: ["Rossetti AO, Logroscino G, Milligan TA, et al. Status Epilepticus Severity Score (STESS): a tool to orient early treatment strategy. J Neurol 2008;255:1561–1566."]
+}),
+pickCalc({
+  id: "rass", abbr: "RASS", name: "Richmond Agitation–Sedation Scale", cat: "Seizures & ICU",
+  desc: "Sedation and agitation level, +4 to −5", keywords: "rass sedation agitation icu richmond delirium", intro: "Observe, then use voice, then physical stimulation if needed.", unit: "RASS",
+  items: [{ id: "r", label: "Level", options: [
+    P(4, "+4 Combative", "Overtly combative, violent, danger to staff", "crit", "+4"),
+    P(3, "+3 Very agitated", "Pulls or removes tubes or catheters; aggressive", "crit", "+3"),
+    P(2, "+2 Agitated", "Frequent non-purposeful movement, fights the ventilator", "warn", "+2"),
+    P(1, "+1 Restless", "Anxious, but movements not aggressive", "warn", "+1"),
+    P(0, "0 Alert and calm", "", "ok", "0"),
+    P(-1, "−1 Drowsy", "Not fully alert; sustained eye-opening to voice (> 10 s)", "ok", "−1"),
+    P(-2, "−2 Light sedation", "Briefly awakens with eye contact to voice (< 10 s)", "info", "−2"),
+    P(-3, "−3 Moderate sedation", "Movement or eye-opening to voice, but no eye contact", "warn", "−3"),
+    P(-4, "−4 Deep sedation", "No response to voice; movement or eye-opening to physical stimulation", "crit", "−4"),
+    P(-5, "−5 Unarousable", "No response to voice or physical stimulation", "crit", "−5")] }],
+  refs: ["Sessler CN, Gosnell MS, Grap MJ, et al. The Richmond Agitation-Sedation Scale. Am J Respir Crit Care Med 2002;166:1338–1344."]
+}),
+
+/* ================= PSYCHIATRY ================= */
+sumCalc({
+  id: "phq9", abbr: "PHQ-9", name: "PHQ-9 depression", cat: "Depression & anxiety",
+  desc: "Depression severity over the last 2 weeks", keywords: "phq9 phq depression screening patient health questionnaire", intro: "Over the last 2 weeks, how often has the patient been bothered by the following?", outOf: 27, scale: SCALE_PHQ,
+  items: [
+    { id: "q1", label: "1. Little interest or pleasure in doing things" },
+    { id: "q2", label: "2. Feeling down, depressed or hopeless" },
+    { id: "q3", label: "3. Trouble falling or staying asleep, or sleeping too much" },
+    { id: "q4", label: "4. Feeling tired or having little energy" },
+    { id: "q5", label: "5. Poor appetite or overeating" },
+    { id: "q6", label: "6. Feeling bad about yourself, or that you are a failure or have let yourself or your family down" },
+    { id: "q7", label: "7. Trouble concentrating on things, such as reading or watching television" },
+    { id: "q8", label: "8. Moving or speaking so slowly that others could notice, or being so fidgety or restless that you move around much more than usual" },
+    { id: "q9", label: "9. Thoughts that you would be better off dead, or of hurting yourself in some way" }
+  ],
+  bands: [[4, "Minimal depression", "ok"], [9, "Mild depression", "ok"], [14, "Moderate depression", "warn"], [19, "Moderately severe depression", "crit"], [27, "Severe depression", "crit"]],
+  post: function (r, a) {
+    if (a.q9 > 0) { r.level = "crit"; r.detail = "Item 9 positive: assess suicide risk now"; r.summary += "; item 9 positive"; }
+    else r.detail = "5 mild · 10 moderate · 15 moderately severe · 20 severe";
+  },
+  notes: ["A score ≥ 10 has good sensitivity for major depression; diagnosis needs a clinical interview.", "Any positive answer to item 9 needs a direct safety assessment, whatever the total."],
+  refs: ["Kroenke K, Spitzer RL, Williams JB. The PHQ-9: validity of a brief depression severity measure. J Gen Intern Med 2001;16:606–613."]
+}),
+sumCalc({
+  id: "gad7", abbr: "GAD-7", name: "GAD-7 anxiety", cat: "Depression & anxiety",
+  desc: "Anxiety severity over the last 2 weeks", keywords: "gad7 gad anxiety screening generalized", intro: "Over the last 2 weeks, how often has the patient been bothered by the following?", outOf: 21, scale: SCALE_PHQ,
+  items: [
+    { id: "q1", label: "1. Feeling nervous, anxious or on edge" },
+    { id: "q2", label: "2. Not being able to stop or control worrying" },
+    { id: "q3", label: "3. Worrying too much about different things" },
+    { id: "q4", label: "4. Trouble relaxing" },
+    { id: "q5", label: "5. Being so restless that it is hard to sit still" },
+    { id: "q6", label: "6. Becoming easily annoyed or irritable" },
+    { id: "q7", label: "7. Feeling afraid, as if something awful might happen" }
+  ],
+  bands: [[4, "Minimal anxiety", "ok"], [9, "Mild anxiety", "ok"], [14, "Moderate anxiety", "warn"], [21, "Severe anxiety", "crit"]],
+  post: function (r) { r.detail = "A score ≥ 10 suggests probable generalised anxiety disorder"; },
+  refs: ["Spitzer RL, Kroenke K, Williams JB, Löwe B. A brief measure for assessing generalized anxiety disorder: the GAD-7. Arch Intern Med 2006;166:1092–1097."]
+}),
+sumCalc({
+  id: "epds", abbr: "EPDS", name: "Edinburgh Postnatal Depression Scale", cat: "Depression & anxiety",
+  desc: "Perinatal depression screen, past 7 days", keywords: "edinburgh postnatal postpartum perinatal depression epds", intro: "The mother chooses the answer closest to how she has felt in the past 7 days.", outOf: 30,
+  items: [
+    { id: "q1", label: "1. I have been able to laugh and see the funny side of things", options: [opt(0, "As much as I always could", 0), opt(1, "Not quite so much now", 1), opt(2, "Definitely not so much now", 2), opt(3, "Not at all", 3)] },
+    { id: "q2", label: "2. I have looked forward with enjoyment to things", options: [opt(0, "As much as I ever did", 0), opt(1, "Rather less than I used to", 1), opt(2, "Definitely less than I used to", 2), opt(3, "Hardly at all", 3)] },
+    { id: "q3", label: "3. I have blamed myself unnecessarily when things went wrong", options: [opt(3, "Yes, most of the time", 3), opt(2, "Yes, some of the time", 2), opt(1, "Not very often", 1), opt(0, "No, never", 0)] },
+    { id: "q4", label: "4. I have been anxious or worried for no good reason", options: [opt(0, "No, not at all", 0), opt(1, "Hardly ever", 1), opt(2, "Yes, sometimes", 2), opt(3, "Yes, very often", 3)] },
+    { id: "q5", label: "5. I have felt scared or panicky for no very good reason", options: [opt(3, "Yes, quite a lot", 3), opt(2, "Yes, sometimes", 2), opt(1, "No, not much", 1), opt(0, "No, not at all", 0)] },
+    { id: "q6", label: "6. Things have been getting on top of me", options: [opt(3, "Yes, most of the time I haven't been able to cope at all", 3), opt(2, "Yes, sometimes I haven't been coping as well as usual", 2), opt(1, "No, most of the time I have coped quite well", 1), opt(0, "No, I have been coping as well as ever", 0)] },
+    { id: "q7", label: "7. I have been so unhappy that I have had difficulty sleeping", options: [opt(3, "Yes, most of the time", 3), opt(2, "Yes, sometimes", 2), opt(1, "Not very often", 1), opt(0, "No, not at all", 0)] },
+    { id: "q8", label: "8. I have felt sad or miserable", options: [opt(3, "Yes, most of the time", 3), opt(2, "Yes, quite often", 2), opt(1, "Not very often", 1), opt(0, "No, not at all", 0)] },
+    { id: "q9", label: "9. I have been so unhappy that I have been crying", options: [opt(3, "Yes, most of the time", 3), opt(2, "Yes, quite often", 2), opt(1, "Only occasionally", 1), opt(0, "No, never", 0)] },
+    { id: "q10", label: "10. The thought of harming myself has occurred to me", options: [opt(3, "Yes, quite often", 3), opt(2, "Sometimes", 2), opt(1, "Hardly ever", 1), opt(0, "Never", 0)] }
+  ],
+  bands: [[9, "Depression unlikely", "ok"], [12, "Possible depression", "warn"], [30, "Probable depression", "crit"]],
+  post: function (r, a) {
+    if (a.q10 > 0) { r.level = "crit"; r.detail = "Item 10 positive: assess self-harm risk now"; r.summary += "; item 10 positive"; }
+    else r.detail = "Common cut-offs: ≥ 10 possible, ≥ 13 probable depression";
+  },
+  refs: ["Cox JL, Holden JM, Sagovsky R. Detection of postnatal depression: development of the 10-item Edinburgh Postnatal Depression Scale. Br J Psychiatry 1987;150:782–786."]
+}),
+sumCalc({
+  id: "ham-a", abbr: "HAM-A", name: "Hamilton Anxiety Rating Scale", cat: "Depression & anxiety",
+  desc: "Clinician-rated anxiety severity, 0–56", keywords: "hamilton anxiety hama ham-a rating scale", intro: "Rate each item from the interview.", outOf: 56, scale: SCALE_SEV5,
+  items: [
+    { id: "q1", label: "1. Anxious mood", hint: "Worries, anticipation of the worst, fearful anticipation, irritability" },
+    { id: "q2", label: "2. Tension", hint: "Tension, fatigability, startle, tearfulness, trembling, restlessness, inability to relax" },
+    { id: "q3", label: "3. Fears", hint: "Of dark, strangers, being left alone, animals, traffic, crowds" },
+    { id: "q4", label: "4. Insomnia", hint: "Difficulty falling asleep, broken or unsatisfying sleep, fatigue on waking, nightmares" },
+    { id: "q5", label: "5. Intellectual", hint: "Difficulty concentrating, poor memory" },
+    { id: "q6", label: "6. Depressed mood", hint: "Loss of interest, lack of pleasure, early waking, diurnal swing" },
+    { id: "q7", label: "7. Somatic (muscular)", hint: "Aches, twitching, stiffness, myoclonic jerks, teeth grinding, unsteady voice" },
+    { id: "q8", label: "8. Somatic (sensory)", hint: "Tinnitus, blurred vision, hot and cold flushes, weakness, pricking sensations" },
+    { id: "q9", label: "9. Cardiovascular", hint: "Tachycardia, palpitations, chest pain, throbbing vessels, fainting feelings" },
+    { id: "q10", label: "10. Respiratory", hint: "Chest pressure or constriction, choking feelings, sighing, dyspnoea" },
+    { id: "q11", label: "11. Gastrointestinal", hint: "Swallowing difficulty, abdominal pain or fullness, nausea, bowel changes, weight loss" },
+    { id: "q12", label: "12. Genitourinary", hint: "Urinary frequency or urgency, menstrual change, loss of libido, erectile problems" },
+    { id: "q13", label: "13. Autonomic", hint: "Dry mouth, flushing, pallor, sweating, giddiness, tension headache" },
+    { id: "q14", label: "14. Behaviour at interview", hint: "Fidgeting, pacing, hand tremor, furrowed brow, strained face, sighing, rapid breathing" }
+  ],
+  bands: [[17, "Mild anxiety", "ok"], [24, "Mild to moderate anxiety", "warn"], [30, "Moderate to severe anxiety", "crit"], [56, "Severe anxiety", "crit"]],
+  post: function (r) { r.detail = "Commonly used bands; not diagnostic"; },
+  refs: ["Hamilton M. The assessment of anxiety states by rating. Br J Med Psychol 1959;32:50–55."]
+}),
+sumCalc({
+  id: "audit", abbr: "AUDIT", name: "AUDIT (alcohol use)", cat: "Substance use",
+  desc: "WHO Alcohol Use Disorders Identification Test", keywords: "alcohol audit who drinking hazardous harmful dependence", intro: "One drink = one standard drink (about 10 g of alcohol).", outOf: 40,
+  items: [
+    { id: "q1", label: "1. How often do you have a drink containing alcohol?", options: [opt(0, "Never", 0), opt(1, "Monthly or less", 1), opt(2, "2–4 times a month", 2), opt(3, "2–3 times a week", 3), opt(4, "4 or more times a week", 4)] },
+    { id: "q2", label: "2. How many drinks on a typical day when you are drinking?", options: [opt(0, "1 or 2", 0), opt(1, "3 or 4", 1), opt(2, "5 or 6", 2), opt(3, "7, 8 or 9", 3), opt(4, "10 or more", 4)] },
+    { id: "q3", label: "3. How often do you have six or more drinks on one occasion?", options: FREQ5() },
+    { id: "q4", label: "4. In the last year, how often could you not stop drinking once you had started?", options: FREQ5() },
+    { id: "q5", label: "5. In the last year, how often did you fail to do what was expected of you because of drinking?", options: FREQ5() },
+    { id: "q6", label: "6. In the last year, how often did you need a first drink in the morning after a heavy session?", options: FREQ5() },
+    { id: "q7", label: "7. In the last year, how often have you felt guilt or remorse after drinking?", options: FREQ5() },
+    { id: "q8", label: "8. In the last year, how often could you not remember the night before because of drinking?", options: FREQ5() },
+    { id: "q9", label: "9. Have you or someone else been injured because of your drinking?", options: INJ3 },
+    { id: "q10", label: "10. Has a relative, friend or health worker been concerned about your drinking or suggested you cut down?", options: INJ3 }
+  ],
+  bands: [[7, "Zone I: low-risk drinking", "ok"], [15, "Zone II: hazardous drinking", "warn"], [19, "Zone III: harmful drinking", "crit"], [40, "Zone IV: possible dependence", "crit"]],
+  post: function (r, a, t) { r.detail = t <= 7 ? "Alcohol education" : t <= 15 ? "Simple advice" : t <= 19 ? "Brief counselling and monitoring" : "Refer for diagnostic evaluation and treatment"; },
+  refs: ["Babor TF, Higgins-Biddle JC, Saunders JB, Monteiro MG. AUDIT: The Alcohol Use Disorders Identification Test. Guidelines for use in primary care. 2nd ed. World Health Organization; 2001."]
+}),
+{
+  id: "audit-c", abbr: "AUDIT-C", name: "AUDIT-C (alcohol screen)", cat: "Substance use",
+  desc: "Three-question alcohol screen", keywords: "alcohol audit-c auditc screening", intro: "The first three AUDIT questions.",
+  items: [
+    { id: "sex", label: "Sex", options: [opt("m", "Male"), opt("f", "Female")] },
+    { id: "q1", label: "1. How often do you have a drink containing alcohol?", options: [opt(0, "Never", 0), opt(1, "Monthly or less", 1), opt(2, "2–4 times a month", 2), opt(3, "2–3 times a week", 3), opt(4, "4 or more times a week", 4)] },
+    { id: "q2", label: "2. How many drinks on a typical day when you are drinking?", options: [opt(0, "1 or 2", 0), opt(1, "3 or 4", 1), opt(2, "5 or 6", 2), opt(3, "7, 8 or 9", 3), opt(4, "10 or more", 4)] },
+    { id: "q3", label: "3. How often do you have six or more drinks on one occasion?", options: FREQ5() }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["sex", "q1", "q2", "q3"]);
+    if (n) return { complete: false, remaining: n };
+    var t = a.q1 + a.q2 + a.q3;
+    var cut = a.sex === "m" ? 4 : 3;
+    return t >= cut
+      ? { complete: true, score: t, unit: "of 12", level: "warn", label: "Positive screen", detail: "Cut-off ≥ " + cut + (a.sex === "m" ? " in men" : " in women") + "; complete the full AUDIT", summary: "AUDIT-C " + t + "/12 — positive screen" }
+      : { complete: true, score: t, unit: "of 12", level: "ok", label: "Negative screen", detail: "Cut-off ≥ " + cut + (a.sex === "m" ? " in men" : " in women"), summary: "AUDIT-C " + t + "/12 — negative screen" };
+  },
+  refs: ["Bush K, Kivlahan DR, McDonell MB, et al. The AUDIT alcohol consumption questions (AUDIT-C). Arch Intern Med 1998;158:1789–1795."]
+},
+sumCalc({
+  id: "cage", abbr: "CAGE", name: "CAGE questionnaire", cat: "Substance use",
+  desc: "Four-question alcohol screen", keywords: "cage alcohol screening cut annoyed guilty eye opener", intro: "Tick each question answered yes.", outOf: 4,
+  items: [{ id: "c", type: "checks", label: "Answered yes", checks: [
+    { id: "c1", label: "Have you ever felt you should Cut down on your drinking?", pts: 1 },
+    { id: "c2", label: "Have people Annoyed you by criticising your drinking?", pts: 1 },
+    { id: "c3", label: "Have you ever felt bad or Guilty about your drinking?", pts: 1 },
+    { id: "c4", label: "Have you ever had a drink first thing in the morning to steady your nerves or get rid of a hangover (Eye-opener)?", pts: 1 }] }],
+  bands: [[1, "Not clinically significant", "ok"], [4, "Clinically significant (≥ 2)", "warn"]],
+  refs: ["Ewing JA. Detecting alcoholism: the CAGE questionnaire. JAMA 1984;252:1905–1907."]
+}),
+sumCalc({
+  id: "ciwa", abbr: "CIWA-Ar", name: "CIWA-Ar (alcohol withdrawal)", cat: "Substance use",
+  desc: "Alcohol withdrawal severity, 0–67", keywords: "ciwa ciwa-ar alcohol withdrawal delirium tremens benzodiazepine", intro: "Tap a number for each item. Each item shows its anchor descriptions.", outOf: 67,
+  items: [
+    ciwaItem("nv", "Nausea and vomiting", { 0: "none", 1: "mild nausea, no vomiting", 4: "intermittent nausea with dry heaves", 7: "constant nausea, frequent dry heaves and vomiting" }, 7),
+    ciwaItem("tr", "Tremor (arms extended, fingers spread)", { 0: "none", 1: "not visible, felt fingertip to fingertip", 4: "moderate with arms extended", 7: "severe, even with arms not extended" }, 7),
+    ciwaItem("sw", "Paroxysmal sweats", { 0: "none", 1: "barely perceptible, palms moist", 4: "beads of sweat on forehead", 7: "drenching sweats" }, 7),
+    ciwaItem("anx", "Anxiety", { 0: "at ease", 1: "mildly anxious", 4: "moderately anxious or guarded", 7: "acute panic state" }, 7),
+    ciwaItem("ag", "Agitation", { 0: "normal activity", 1: "somewhat more than normal", 4: "moderately fidgety and restless", 7: "paces or thrashes about constantly" }, 7),
+    ciwaItem("tac", "Tactile disturbances", { 0: "none", 1: "very mild itching, pins and needles, burning or numbness", 2: "mild", 3: "moderate", 4: "moderately severe hallucinations", 5: "severe hallucinations", 6: "extremely severe hallucinations", 7: "continuous hallucinations" }, 7),
+    ciwaItem("aud", "Auditory disturbances", { 0: "none", 1: "very mild harshness or ability to frighten", 2: "mild", 3: "moderate", 4: "moderately severe hallucinations", 5: "severe hallucinations", 6: "extremely severe hallucinations", 7: "continuous hallucinations" }, 7),
+    ciwaItem("vis", "Visual disturbances", { 0: "none", 1: "very mild sensitivity to light", 2: "mild", 3: "moderate", 4: "moderately severe hallucinations", 5: "severe hallucinations", 6: "extremely severe hallucinations", 7: "continuous hallucinations" }, 7),
+    ciwaItem("ha", "Headache, fullness in head", { 0: "none", 1: "very mild", 2: "mild", 3: "moderate", 4: "moderately severe", 5: "severe", 6: "very severe", 7: "extremely severe" }, 7),
+    ciwaItem("or", "Orientation and clouding of sensorium", { 0: "oriented, can do serial additions", 1: "cannot do serial additions or unsure of date", 2: "date off by ≤ 2 days", 3: "date off by > 2 days", 4: "disoriented for place or person" }, 4)
+  ],
+  bands: [[9, "Minimal to mild withdrawal", "ok"], [15, "Moderate withdrawal", "warn"], [67, "Severe withdrawal", "crit"]],
+  post: function (r) { r.detail = "Thresholds vary; many protocols treat at ≥ 8–10"; },
+  refs: ["Sullivan JT, Sykora K, Schneiderman J, et al. Assessment of alcohol withdrawal: the revised Clinical Institute Withdrawal Assessment for Alcohol scale (CIWA-Ar). Br J Addict 1989;84:1353–1357."]
+}),
+sumCalc({
+  id: "cows", abbr: "COWS", name: "Clinical Opiate Withdrawal Scale", cat: "Substance use",
+  desc: "Opioid withdrawal severity", keywords: "cows opioid opiate withdrawal buprenorphine induction", intro: "Rate what you observe over the assessment.",
+  items: [
+    { id: "hr", label: "Resting pulse (after 1 minute sitting or lying)", options: [opt(0, "≤ 80", 0), opt(1, "81–100", 1), opt(2, "101–120", 2), opt(4, "> 120", 4)] },
+    { id: "sw", label: "Sweating (last 30 min, not due to room temperature or activity)", options: [opt(0, "No chills or flushing", 0), opt(1, "Subjective chills or flushing", 1), opt(2, "Flushed or moist face", 2), opt(3, "Beads of sweat on brow or face", 3), opt(4, "Sweat streaming off face", 4)] },
+    { id: "rest", label: "Restlessness", options: [opt(0, "Able to sit still", 0), opt(1, "Reports difficulty sitting still, but able to", 1), opt(3, "Frequent shifting or extraneous movements", 3), opt(5, "Unable to sit still for more than a few seconds", 5)] },
+    { id: "pup", label: "Pupil size", options: [opt(0, "Pinned or normal for room light", 0), opt(1, "Possibly larger than normal", 1), opt(2, "Moderately dilated", 2), opt(5, "Only the rim of the iris visible", 5)] },
+    { id: "ache", label: "Bone or joint aches", options: [opt(0, "None", 0), opt(1, "Mild diffuse discomfort", 1), opt(2, "Reports severe diffuse aching", 2), opt(4, "Rubbing joints or muscles, cannot sit still", 4)] },
+    { id: "nose", label: "Runny nose or tearing", options: [opt(0, "None", 0), opt(1, "Nasal stuffiness or moist eyes", 1), opt(2, "Nose running or tearing", 2), opt(4, "Nose constantly running or tears streaming", 4)] },
+    { id: "gi", label: "GI upset (last 30 min)", options: [opt(0, "None", 0), opt(1, "Stomach cramps", 1), opt(2, "Nausea or loose stool", 2), opt(3, "Vomiting or diarrhoea", 3), opt(5, "Multiple episodes of vomiting or diarrhoea", 5)] },
+    { id: "tr", label: "Tremor (hands outstretched)", options: [opt(0, "None", 0), opt(1, "Felt but not seen", 1), opt(2, "Slight visible tremor", 2), opt(4, "Gross tremor or twitching", 4)] },
+    { id: "yawn", label: "Yawning", options: [opt(0, "None", 0), opt(1, "Once or twice during assessment", 1), opt(2, "Three or more times during assessment", 2), opt(4, "Several times a minute", 4)] },
+    { id: "anx", label: "Anxiety or irritability", options: [opt(0, "None", 0), opt(1, "Reports increasing irritability or anxiety", 1), opt(2, "Obviously irritable or anxious", 2), opt(4, "So irritable or anxious that assessment is difficult", 4)] },
+    { id: "gf", label: "Gooseflesh", options: [opt(0, "Skin smooth", 0), opt(3, "Piloerection can be felt, hairs standing up on arms", 3), opt(5, "Prominent piloerection", 5)] }
+  ],
+  bands: [[4, "No active withdrawal", "ok"], [12, "Mild withdrawal", "ok"], [24, "Moderate withdrawal", "warn"], [36, "Moderately severe withdrawal", "crit"], [99, "Severe withdrawal", "crit"]],
+  refs: ["Wesson DR, Ling W. The Clinical Opiate Withdrawal Scale (COWS). J Psychoactive Drugs 2003;35:253–259."]
+}),
+sumCalc({
+  id: "aims", abbr: "AIMS", name: "Abnormal Involuntary Movement Scale", cat: "Psychopharmacology",
+  desc: "Screen for tardive dyskinesia", keywords: "aims tardive dyskinesia antipsychotic involuntary movement", intro: "Rate the most severe movement seen in each area.", scale: SCALE_AIMS, outOf: 28,
+  items: [
+    { id: "face", label: "1. Muscles of facial expression", hint: "Forehead, eyebrows, periorbital area, cheeks; frowning, blinking, grimacing" },
+    { id: "lips", label: "2. Lips and perioral area", hint: "Puckering, pouting, smacking" },
+    { id: "jaw", label: "3. Jaw", hint: "Biting, clenching, chewing, mouth opening, lateral movement" },
+    { id: "tongue", label: "4. Tongue", hint: "Increased movement in and out of the mouth only" },
+    { id: "upper", label: "5. Upper extremities", hint: "Arms, wrists, hands, fingers; choreic or athetoid movements, not tremor" },
+    { id: "lower", label: "6. Lower extremities", hint: "Legs, knees, ankles, toes; foot squirming, tapping, inversion/eversion" },
+    { id: "trunk", label: "7. Neck, shoulders, hips", hint: "Rocking, twisting, squirming, pelvic gyrations" }
+  ],
+  bands: [[28, "", "info"]],
+  post: function (r, a) {
+    var ids = ["face", "lips", "jaw", "tongue", "upper", "lower", "trunk"];
+    var mild = ids.filter(function (k) { return a[k] >= 2; }).length, mod = ids.filter(function (k) { return a[k] >= 3; }).length;
+    var pos = mild >= 2 || mod >= 1;
+    r.label = pos ? "Meets criteria for probable TD" : "Does not meet TD criteria";
+    r.level = pos ? "warn" : "ok";
+    r.detail = "Criteria: ≥ 2 (mild) in two areas, or ≥ 3 (moderate) in one";
+    r.summary = "AIMS items 1–7 total " + r.score + " — " + r.label.toLowerCase();
+  },
+  refs: ["Guy W. ECDEU Assessment Manual for Psychopharmacology. US Department of Health, Education and Welfare; 1976:534–537.", "Schooler NR, Kane JM. Research diagnoses for tardive dyskinesia. Arch Gen Psychiatry 1982;39:486–487."]
+})
+];
+
+/* ===== Spine set (added Nov 2026) ===== */
+function numAny(a, id) { var v = a[id]; return typeof v === "number" && isFinite(v) ? v : null; }
+var N_AO = [
+  P("N0", "N0 — Neurologically intact", "", "ok"),
+  P("N1", "N1 — Transient deficit, resolved", "", "ok"),
+  P("N2", "N2 — Radicular symptoms", "", "warn"),
+  P("N3", "N3 — Incomplete cord injury or any cauda equina injury", "", "crit"),
+  P("N4", "N4 — Complete cord injury", "", "crit"),
+  P("NX", "NX — Cannot be examined", "", "warn")
+];
+function grade4(id, label, opts) { return { id: id, label: label, options: opts }; }
+
+var SPINE = [
+
+/* ---------- Spine trauma ---------- */
+{
+  id: "ao-subaxial", abbr: "AO C", name: "AO Spine subaxial cervical (C3–C7)", cat: "Spine trauma",
+  desc: "AO classification code with Subaxial AO Spine Injury Score", keywords: "ao spine aospine subaxial cervical classification facet f1 f2 f3 f4 injury score aosis",
+  intro: "Choose the main injury, the worst facet injury, neurology and any modifiers.",
+  items: [
+    { id: "morph", label: "Main injury", options: [
+      opt("none", "No body or tension band injury (facet injury only)", 0),
+      opt("A0", "A0 — Minor, non-structural", 0, "e.g., isolated lamina or spinous process fracture"),
+      opt("A1", "A1 — Wedge-compression", 1, "Single endplate, posterior wall intact"),
+      opt("A2", "A2 — Split / pincer", 2, "Both endplates, posterior wall intact"),
+      opt("A3", "A3 — Incomplete burst", 4, "Single endplate and posterior wall"),
+      opt("A4", "A4 — Complete burst", 5, "Both endplates and posterior wall"),
+      opt("B1", "B1 — Posterior tension band injury, bony", 5, "Transosseous"),
+      opt("B2", "B2 — Posterior tension band injury", 6, "Capsuloligamentous, or bony and ligamentous"),
+      opt("B3", "B3 — Anterior tension band injury", 6, "Hyperextension"),
+      opt("C", "C — Translation", 7, "Displacement in any direction")] },
+    { id: "facet", label: "Worst facet injury", options: [
+      opt("none", "No facet injury", 0),
+      opt("F1", "F1 — Non-displaced facet fracture", 2, "Fragment < 1 cm and < 40% of the lateral mass"),
+      opt("F2", "F2 — Facet fracture with potential for instability", 4, "Fragment > 1 cm, > 40% of the lateral mass, or displaced"),
+      opt("F3", "F3 — Floating lateral mass", 5, "Pedicle and lamina both disrupted"),
+      opt("F4", "F4 — Pathological subluxation or perched/dislocated facet", 7)] },
+    { id: "bl", type: "toggle", label: "Facets", tag: "optional", toggle: { label: "BL — Bilateral facet injury", sub: "Adds the BL code; no extra points", pts: 0 } },
+    { id: "neuro", label: "Neurological status", options: [
+      opt("N0", "N0 — Neurologically intact", 0), opt("N1", "N1 — Transient deficit, resolved", 1),
+      opt("N2", "N2 — Radiculopathy", 2), opt("N3", "N3 — Incomplete cord injury", 4),
+      opt("N4", "N4 — Complete cord injury", 4), opt("NX", "NX — Cannot be examined", 3)] },
+    { id: "nplus", type: "toggle", label: "Neuro modifier", tag: "optional", toggle: { label: "+ Ongoing cord compression with an incomplete deficit", pts: 0 } },
+    { id: "mods", type: "checks", label: "Case modifiers", checks: [
+      { id: "M1", label: "M1 — PLC injury without complete disruption", pts: 1 },
+      { id: "M2", label: "M2 — Critical disc herniation", pts: 4 },
+      { id: "M3", label: "M3 — Stiffening or metabolic bone disease", sub: "e.g., DISH, ankylosing spondylitis, OPLL", pts: 4 },
+      { id: "M4", label: "M4 — Vertebral artery abnormality", sub: "No points", pts: 0 }] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["morph", "facet", "neuro"]);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ["morph", "facet", "neuro"]);
+    var mods = ["M1", "M2", "M3", "M4"].filter(function (k) { return a[k]; });
+    t += (a.M1 ? 1 : 0) + (a.M2 ? 4 : 0) + (a.M3 ? 4 : 0);
+    var main = a.morph === "none" ? "" : a.morph;
+    var extras = [];
+    if (a.facet !== "none") extras.push(a.facet + (a.bl ? " BL" : ""));
+    extras.push(a.neuro + (a.nplus ? "+" : ""));
+    extras = extras.concat(mods);
+    var code = main ? main + " (" + extras.join(", ") + ")" : extras.join(", ");
+    return { complete: true, score: t, unit: "AOSIS", level: "info", label: code,
+      detail: "Treatment thresholds for this score are not yet published",
+      summary: "AO Spine subaxial: " + code + "; subaxial AOSIS " + t };
+  },
+  notes: ["Point values are from the Subaxial Cervical AO Spine Injury Score; its authors left surgical thresholds to future work.", "If each side has a different facet injury, the right side is described first in the full code; this calculator scores the worst one."],
+  refs: ["Vaccaro AR, Koerner JD, Radcliff KE, et al. AOSpine subaxial cervical spine injury classification system. Eur Spine J 2016;25:2173–2184.", "Canseco JA, Schroeder GD, Paziuk TM, et al. The Subaxial Cervical AO Spine Injury Score. Global Spine J 2022;12:1066–1073."]
+},
+{
+  id: "ao-upper", abbr: "AO UC", name: "AO Spine upper cervical", cat: "Spine trauma",
+  desc: "Occiput–C1–C2 injury region and type", keywords: "ao spine upper cervical occipital condyle c1 c2 atlas axis craniocervical classification",
+  intro: "Choose the injured region, then the injury type.",
+  items: [
+    { id: "reg", label: "Region", options: [
+      opt("I", "I — Occipital condyle and craniocervical junction"),
+      opt("II", "II — C1 ring and C1–C2 joint"),
+      opt("III", "III — C2 and C2–C3 joint")] },
+    { id: "type", label: "Injury type", options: [
+      opt("A", "Type A — Bony injury only", null, "No significant ligamentous, tension band or disc injury"),
+      opt("B", "Type B — Ligamentous or tension band injury", null, "With or without bony injury, no displacement"),
+      opt("C", "Type C — Displacement or translation", null, "In any plane")] },
+    { id: "neuro", label: "Neurological status", options: N_AO }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["reg", "type", "neuro"]);
+    if (n) return { complete: false, remaining: n };
+    var d = {
+      I: { A: "Isolated bony injury of the condyle", B: "Non-displaced craniocervical ligamentous injury", C: "Any injury with displacement" },
+      II: { A: "Isolated bony injury of the C1 arch", B: "Transverse atlantal ligament injury", C: "Atlantoaxial instability or translation in any plane" },
+      III: { A: "Bony injury without ligamentous, tension band or disc injury", B: "Tension band or ligamentous injury, with or without bony injury", C: "Vertebral body translation in any plane" }
+    }[a.reg][a.type];
+    var code = a.reg + " " + a.type + ", " + a.neuro;
+    return { complete: true, score: a.reg + a.type, unit: "AO UC", level: a.type === "A" ? "ok" : a.type === "B" ? "warn" : "crit",
+      label: d, detail: code, summary: "AO Spine upper cervical " + code + " — " + d };
+  },
+  refs: ["Vaccaro AR, Lambrechts MJ, Karamian BA, et al. AO Spine upper cervical injury classification system: a description and reliability study. Spine J 2022;22:2042–2049."]
+},
+{
+  id: "atlas", abbr: "C1", name: "Atlas fracture (Gehweiler + Dickman)", cat: "Spine trauma",
+  desc: "C1 fracture type and transverse ligament status", keywords: "atlas c1 jefferson fracture gehweiler dickman transverse atlantal ligament tal",
+  intro: "Classify the fracture on CT and the transverse atlantal ligament (TAL) on MRI.",
+  items: [
+    { id: "g", label: "Gehweiler type", options: [
+      opt(1, "Type 1 — Isolated anterior arch fracture"), opt(2, "Type 2 — Isolated posterior arch fracture"),
+      opt(3, "Type 3 — Anterior and posterior arch fractures (Jefferson)"), opt(4, "Type 4 — Isolated lateral mass fracture"),
+      opt(5, "Type 5 — Isolated transverse process fracture")] },
+    { id: "tal", label: "Transverse atlantal ligament", options: [
+      opt("intact", "Intact"), opt("I", "Dickman type I — Tear within the ligament", null, "Disruption of the ligament substance"),
+      opt("II", "Dickman type II — Bony avulsion", null, "Avulsion of the tubercle from the lateral mass"),
+      opt("unk", "Not yet assessed")] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["g", "tal"]);
+    if (n) return { complete: false, remaining: n };
+    var r;
+    if (a.tal === "I") r = ["TAL tear: unstable", "crit", "Type I injuries are not expected to heal without surgery; C1–C2 fixation is usually needed"];
+    else if (a.tal === "II") r = ["TAL bony avulsion", "warn", "Type II injuries often heal with rigid external immobilisation"];
+    else if (a.tal === "unk") r = [a.g === 3 || a.g === 4 ? "Assess the TAL on MRI" : "TAL not assessed", "warn", "Stability depends on the transverse ligament"];
+    else r = ["TAL intact", "ok", "Usually stable; treat with external immobilisation"];
+    return { complete: true, score: a.g, unit: "Gehweiler", level: r[1], label: r[0], detail: r[2],
+      summary: "Atlas fracture Gehweiler type " + a.g + ", TAL " + (a.tal === "intact" ? "intact" : a.tal === "unk" ? "not assessed" : "Dickman type " + a.tal) };
+  },
+  refs: ["Gehweiler JA, Osborne RL, Becker RF. The Radiology of Vertebral Trauma. Saunders; 1980.", "Dickman CA, Greene KA, Sonntag VK. Injuries involving the transverse atlantal ligament: classification and treatment guidelines based upon experience with 39 injuries. Neurosurgery 1996;38:44–50."]
+},
+{
+  id: "spence", abbr: "LMD", name: "Rule of Spence (C1 lateral mass displacement)", cat: "Spine trauma",
+  desc: "Combined C1 overhang on C2 to predict TAL injury", keywords: "spence rule atlas c1 lateral mass displacement overhang transverse ligament jefferson",
+  intro: "Measure how far each C1 lateral mass overhangs the C2 lateral mass on the open-mouth view or coronal CT.",
+  items: [{ id: "m", type: "numbers", label: "Overhang (mm)", fields: [
+    { id: "lt", label: "Left overhang" }, { id: "rt", label: "Right overhang" }] }],
+  compute: function (a) {
+    var l = numAny(a, "lt"), r = numAny(a, "rt");
+    if (l === null || r === null || l < 0 || r < 0) return { complete: false, remaining: (l === null ? 1 : 0) + (r === null ? 1 : 0) || 1 };
+    var s = l + r, sv = s.toFixed(1);
+    if (s > 8.1) return { complete: true, score: sv, unit: "mm", level: "crit", label: "TAL injury likely", detail: "Above 8.1 mm (magnification-corrected threshold)", summary: "C1 lateral mass displacement " + sv + " mm (> 8.1 mm) — TAL injury likely" };
+    if (s > 6.9) return { complete: true, score: sv, unit: "mm", level: "warn", label: "TAL injury possible", detail: "Above Spence's 6.9 mm, below the corrected 8.1 mm", summary: "C1 lateral mass displacement " + sv + " mm (6.9–8.1 mm) — TAL injury possible" };
+    return { complete: true, score: sv, unit: "mm", level: "ok", label: "Below threshold", detail: "Does not exclude TAL injury; get an MRI if suspected", summary: "C1 lateral mass displacement " + sv + " mm (≤ 6.9 mm)" };
+  },
+  notes: ["The rule is poor at excluding TAL injury; MRI of the ligament and the Dickman type are more useful for decisions."],
+  refs: ["Spence KF Jr, Decker S, Sell KW. Bursting atlantal fracture associated with rupture of the transverse ligament. J Bone Joint Surg Am 1970;52:543–549.", "Heller JG, Viroslav S, Hudson T. Jefferson fractures: the role of magnification artifact in assessing transverse ligament integrity. J Spinal Disord 1993;6:392–396."]
+},
+pickCalc({
+  id: "condyle", abbr: "OCF", name: "Occipital condyle fracture (Anderson–Montesano)", cat: "Spine trauma",
+  desc: "Type I–III condyle fractures", keywords: "occipital condyle fracture anderson montesano craniocervical", intro: "Classify on CT.", unit: "type",
+  items: [{ id: "t", label: "Fracture pattern", options: [
+    P("I", "Type I — Comminuted impaction fracture", "From axial loading; usually stable", "ok"),
+    P("II", "Type II — Extension of a basilar skull fracture", "Usually stable", "ok"),
+    P("III", "Type III — Avulsion at the alar ligament attachment", "Potentially unstable; assess the craniocervical junction", "warn")] }],
+  refs: ["Anderson PA, Montesano PX. Morphology and treatment of occipital condyle fractures. Spine 1988;13:731–736."]
+}),
+sumCalc({
+  id: "load-sharing", abbr: "LSC", name: "Load-Sharing Classification (McCormack)", cat: "Spine trauma",
+  desc: "Need for anterior column support in burst fractures", keywords: "load sharing mccormack gaines burst fracture anterior column short segment",
+  intro: "Grade the fractured vertebral body on CT and the kyphosis correction on radiographs.", outOf: 9,
+  items: [
+    { id: "com", label: "Comminution of the vertebral body (sagittal CT)", options: [opt(1, "Little, < 30%", 1), opt(2, "More, 30–60%", 2), opt(3, "Gross, > 60%", 3)] },
+    { id: "app", label: "Apposition of fragments (axial CT)", options: [opt(1, "Minimal displacement", 1), opt(2, "Spread ≥ 2 mm over < 50% of the cross-section", 2), opt(3, "Wide, ≥ 2 mm over > 50% of the cross-section", 3)] },
+    { id: "def", label: "Kyphosis correction needed", options: [opt(1, "≤ 3°", 1), opt(2, "4–9°", 2), opt(3, "≥ 10°", 3)] }
+  ],
+  bands: [[6, "Posterior short-segment fixation usually suffices", "ok"], [9, "Consider anterior column reconstruction", "crit"]],
+  post: function (r, a, t) { r.detail = t >= 7 ? "Score ≥ 7: high risk of posterior short-segment failure" : "Score ≤ 6"; },
+  refs: ["McCormack T, Karaikovic E, Gaines RW. The load sharing classification of spine fractures. Spine 1994;19:1741–1744."]
+}),
+{
+  id: "of-score", abbr: "OF", name: "Osteoporotic fracture (OF) classification + OF score", cat: "Spine trauma",
+  desc: "OF 1–5 type and treatment score", keywords: "osteoporotic vertebral fracture of classification of score dgou schnake blattert",
+  intro: "Choose the OF type, then answer the clinical items.",
+  items: [
+    { id: "of", label: "OF type", options: [
+      opt(1, "OF 1 — No deformation", 2, "Vertebral body oedema on MRI-STIR only"),
+      opt(2, "OF 2 — Deformation of one endplate", 4, "No or only minor posterior wall involvement"),
+      opt(3, "OF 3 — Deformation of one endplate with distinct posterior wall involvement", 6),
+      opt(4, "OF 4 — Loss of vertebral frame integrity", 8, "Both endplates, vertebral collapse or pincer type"),
+      opt(5, "OF 5 — Distraction or rotation injury", 10, "Anterior or posterior tension band failure")] },
+    { id: "bmd", label: "Bone density T-score < −3", options: [opt("yes", "Yes", 1), opt("no", "No or unknown", 0)] },
+    { id: "prog", label: "Ongoing fracture progression (sintering)", options: [opt("yes", "Yes", 1), opt("no", "No", -1)] },
+    { id: "pain", label: "Pain under analgesia", options: [opt("ge4", "VAS ≥ 4", 1), opt("lt4", "VAS < 4", -1)] },
+    { id: "neuro", label: "Fracture-related neurological deficit", options: [opt("yes", "Yes", 2), opt("no", "No", 0)] },
+    { id: "mob", label: "Mobilisation under analgesia", options: [opt("no", "Not possible", 1), opt("yes", "Possible", -1)] },
+    { id: "hs", type: "checks", label: "Health status (each −1, maximum −2)", checks: [
+      { id: "asa", label: "ASA > 3" }, { id: "dem", label: "Dementia" }, { id: "bmi", label: "BMI < 20 kg/m²" },
+      { id: "care", label: "Needs nursing care" }, { id: "ac", label: "On anticoagulation" }] }
+  ],
+  compute: function (a) {
+    var ids = ["of", "bmd", "prog", "pain", "neuro", "mob"];
+    var n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var t = sumPts(this, a, ids);
+    var hs = ["asa", "dem", "bmi", "care", "ac"].filter(function (k) { return a[k]; }).length;
+    t -= Math.min(2, hs);
+    var r = t <= 5 ? ["Non-operative treatment", "ok"] : t === 6 ? ["Operative or non-operative", "warn"] : ["Operative treatment", "crit"];
+    return { complete: true, score: t, unit: "OF score", level: r[1], label: r[0],
+      detail: "OF " + a.of + " · 0–5 non-operative · 6 either · > 6 operative",
+      summary: "OF " + a.of + ", OF score " + t + " (" + r[0].toLowerCase() + ")" };
+  },
+  refs: ["Schnake KJ, Blattert TR, Hahn P, et al. Classification of osteoporotic thoracolumbar spine fractures: recommendations of the Spine Section of the German Society for Orthopaedics and Trauma (DGOU). Global Spine J 2018;8(2 Suppl):46S–49S.", "Blattert TR, Schnake KJ, Gonschorek O, et al. Nonsurgical and surgical management of osteoporotic vertebral body fractures: recommendations of the Spine Section of the German Society for Orthopaedics and Trauma (DGOU). Global Spine J 2018;8(2 Suppl):50S–55S."]
+},
+{
+  id: "ao-sacral", abbr: "AO S", name: "AO Spine sacral classification", cat: "Spine trauma",
+  desc: "Sacral injury type, neurology and modifiers", keywords: "ao spine sacral sacrum fracture u-type transforaminal spinopelvic classification",
+  intro: "Choose the most severe sacral injury pattern.",
+  items: [
+    { id: "t", label: "Injury type", options: [
+      opt("A1", "A1 — Coccygeal or compression fracture, or ligamentous avulsion"),
+      opt("A2", "A2 — Non-displaced transverse fracture below the SI joint"),
+      opt("A3", "A3 — Displaced transverse fracture below the SI joint"),
+      opt("B1", "B1 — Central longitudinal fracture involving the spinal canal"),
+      opt("B2", "B2 — Transalar fracture, not involving foramina or canal"),
+      opt("B3", "B3 — Transforaminal fracture, involving foramina but not the canal"),
+      opt("C0", "C0 — Non-displaced sacral U-type variant"),
+      opt("C1", "C1 — U-type variant without posterior pelvic instability"),
+      opt("C2", "C2 — Bilateral complete type B injuries without transverse fracture"),
+      opt("C3", "C3 — Displaced U-type sacral fracture")] },
+    { id: "neuro", label: "Neurological status", options: N_AO },
+    { id: "mods", type: "checks", label: "Case modifiers", checks: [
+      { id: "M1", label: "M1 — Soft-tissue injury" }, { id: "M2", label: "M2 — Metabolic bone disease" },
+      { id: "M3", label: "M3 — Anterior pelvic ring injury" }, { id: "M4", label: "M4 — Sacroiliac joint injury" }] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["t", "neuro"]);
+    if (n) return { complete: false, remaining: n };
+    var mods = ["M1", "M2", "M3", "M4"].filter(function (k) { return a[k]; });
+    var code = a.t + "; " + [a.neuro].concat(mods).join(", ");
+    var ty = a.t.charAt(0);
+    var lab = ty === "A" ? "Lower sacrococcygeal injury" : ty === "B" ? "Posterior pelvic injury" : "Spinopelvic injury";
+    return { complete: true, score: a.t, unit: "AO sacral", level: ty === "A" ? "ok" : ty === "B" ? "warn" : "crit",
+      label: lab, detail: code, summary: "AO Spine sacral " + code };
+  },
+  refs: ["Vaccaro AR, Schroeder GD, Divi SN, et al. Description and reliability of the AOSpine sacral classification system. J Bone Joint Surg Am 2020;102:1454–1463."]
+},
+
+/* ---------- Spine: stability & deformity ---------- */
+sumCalc({
+  id: "wp-cervical", abbr: "W-P C", name: "White–Panjabi checklist: cervical", cat: "Spine: stability & deformity",
+  desc: "Clinical instability of the lower cervical spine (C2–C7)", keywords: "white panjabi cervical instability checklist stretch test translation angulation",
+  intro: "Tick every finding present. A total ≥ 5 means clinical instability.", outOf: 16,
+  items: [{ id: "c", type: "checks", label: "Findings", checks: [
+    { id: "ant", label: "Anterior elements destroyed or unable to function", pts: 2 },
+    { id: "post", label: "Posterior elements destroyed or unable to function", pts: 2 },
+    { id: "tr", label: "Sagittal translation > 3.5 mm or > 20%", sub: "Flexion–extension or resting radiographs", pts: 2 },
+    { id: "rot", label: "Sagittal rotation > 20° (flexion–extension) or relative angulation > 11° (resting)", pts: 2 },
+    { id: "st", label: "Positive stretch test", pts: 2 },
+    { id: "cord", label: "Spinal cord damage", pts: 2 },
+    { id: "root", label: "Nerve root damage", pts: 1 },
+    { id: "disc", label: "Abnormal disc narrowing", pts: 1 },
+    { id: "canal", label: "Developmentally narrow canal", sub: "Sagittal diameter < 13 mm or Pavlov ratio < 0.8", pts: 1 },
+    { id: "load", label: "Dangerous loading anticipated", pts: 1 }] }],
+  bands: [[4, "Clinically stable by the checklist", "ok"], [99, "Clinically unstable (≥ 5)", "crit"]],
+  refs: ["White AA 3rd, Johnson RM, Panjabi MM, Southwick WO. Biomechanical analysis of clinical stability in the cervical spine. Clin Orthop Relat Res 1975;(109):85–96.", "White AA, Panjabi MM. Clinical Biomechanics of the Spine. 2nd ed. Lippincott; 1990."]
+}),
+sumCalc({
+  id: "wp-lumbar", abbr: "W-P L", name: "White–Panjabi checklist: lumbar", cat: "Spine: stability & deformity",
+  desc: "Clinical instability of the lumbar spine", keywords: "white panjabi lumbar instability checklist translation rotation cauda equina",
+  intro: "Tick every finding present. A total ≥ 5 means clinical instability.", outOf: 12,
+  items: [{ id: "c", type: "checks", label: "Findings", checks: [
+    { id: "ant", label: "Anterior elements destroyed or unable to function", pts: 2 },
+    { id: "post", label: "Posterior elements destroyed or unable to function", pts: 2 },
+    { id: "tr", label: "Sagittal translation > 4.5 mm or > 15%", sub: "Flexion–extension or resting radiographs", pts: 2 },
+    { id: "rot", label: "Abnormal sagittal rotation or angulation", sub: "Flexion–extension: > 15° at L1–L4, > 20° at L4–5, > 25° at L5–S1; or resting relative angulation > 22°", pts: 2 },
+    { id: "ce", label: "Cauda equina damage", pts: 3 },
+    { id: "load", label: "Dangerous loading anticipated", pts: 1 }] }],
+  bands: [[4, "Clinically stable by the checklist", "ok"], [99, "Clinically unstable (≥ 5)", "crit"]],
+  refs: ["White AA, Panjabi MM. Clinical Biomechanics of the Spine. 2nd ed. Lippincott; 1990."]
+}),
+{
+  id: "srs-schwab", abbr: "SRS-S", name: "SRS–Schwab adult spinal deformity", cat: "Spine: stability & deformity",
+  desc: "Curve type with PI–LL, SVA and PT modifiers", keywords: "srs schwab adult spinal deformity sagittal pi ll mismatch pelvic tilt sva pelvic incidence",
+  intro: "Choose the coronal curve type and enter the sagittal parameters from standing full-length radiographs.",
+  items: [
+    { id: "curve", label: "Coronal curve type", options: [
+      opt("T", "T — Thoracic only", null, "Lumbar curve < 30°"), opt("L", "L — Thoracolumbar / lumbar only", null, "Thoracic curve < 30°"),
+      opt("D", "D — Double curve", null, "Both curves ≥ 30°"), opt("N", "N — No major coronal deformity", null, "All curves < 30°")] },
+    { id: "m", type: "numbers", label: "Sagittal parameters", fields: [
+      { id: "pi", label: "PI (°)" }, { id: "ll", label: "LL (°)" }, { id: "pt", label: "PT (°)" }, { id: "sva", label: "SVA (cm)" }] }
+  ],
+  compute: function (a) {
+    var pi = numAny(a, "pi"), ll = numAny(a, "ll"), pt = numAny(a, "pt"), sva = numAny(a, "sva");
+    var miss = (a.curve === undefined ? 1 : 0) + [pi, ll, pt, sva].filter(function (v) { return v === null; }).length;
+    if (miss) return { complete: false, remaining: miss };
+    var mm = pi - Math.abs(ll);
+    var g = function (v, lo, hi) { return v < lo ? "0" : v <= hi ? "+" : "++"; };
+    var m1 = g(mm, 10, 20), m2 = g(sva, 4, 9.5), m3 = g(pt, 20, 30);
+    var worst = [m1, m2, m3].indexOf("++") !== -1 ? "crit" : [m1, m2, m3].indexOf("+") !== -1 ? "warn" : "ok";
+    var code = a.curve + " · PI–LL " + m1 + " · SVA " + m2 + " · PT " + m3;
+    return { complete: true, score: a.curve, unit: "curve type", level: worst,
+      label: worst === "ok" ? "No sagittal modifier" : worst === "warn" ? "Moderate sagittal deformity" : "Marked sagittal deformity",
+      detail: code + " (PI–LL " + mm.toFixed(0) + "°)", summary: "SRS–Schwab " + code + "; PI–LL " + mm.toFixed(0) + "°, SVA " + sva + " cm, PT " + pt + "°" };
+  },
+  notes: ["Modifiers: PI–LL 0 < 10°, + 10–20°, ++ > 20°; SVA 0 < 4 cm, + 4–9.5 cm, ++ > 9.5 cm; PT 0 < 20°, + 20–30°, ++ > 30°.", "Enter LL as a positive number. SVA is positive when the C7 plumb line falls in front of the posterosuperior corner of S1."],
+  refs: ["Schwab F, Ungar B, Blondel B, et al. Scoliosis Research Society–Schwab adult spinal deformity classification: a validation study. Spine 2012;37:1077–1082."]
+},
+pickCalc({
+  id: "wiltse", abbr: "Wiltse", name: "Wiltse spondylolisthesis types", cat: "Spine: stability & deformity",
+  desc: "Aetiological type of spondylolisthesis", keywords: "spondylolisthesis wiltse isthmic degenerative dysplastic pars", intro: "Choose the cause of the slip.", unit: "type",
+  items: [{ id: "t", label: "Type", options: [
+    P("I", "I — Dysplastic", "Congenital deficiency of the upper sacrum or L5 arch", "info"),
+    P("IIA", "IIA — Isthmic, lytic", "Stress fracture of the pars", "info"),
+    P("IIB", "IIB — Isthmic, elongated pars", "Elongated but intact pars", "info"),
+    P("IIC", "IIC — Isthmic, acute pars fracture", "", "warn"),
+    P("III", "III — Degenerative", "Long-standing segmental instability, intact pars", "info"),
+    P("IV", "IV — Traumatic", "Fracture of the posterior elements other than the pars", "warn"),
+    P("V", "V — Pathological", "Generalised or local bone disease, including tumour", "warn"),
+    P("VI", "VI — Post-surgical", "Iatrogenic, after decompression", "warn")] }],
+  notes: ["Type VI was added after the original 1976 classification."],
+  refs: ["Wiltse LL, Newman PH, Macnab I. Classification of spondylolisis and spondylolisthesis. Clin Orthop Relat Res 1976;(117):23–29."]
+}),
+
+/* ---------- Spine: degenerative ---------- */
+pickCalc({
+  id: "schizas", abbr: "Schiz", name: "Schizas grade (lumbar central stenosis)", cat: "Spine: degenerative",
+  desc: "Rootlet/CSF pattern on axial T2 MRI", keywords: "lumbar spinal stenosis schizas grade dural sac rootlets mri", intro: "Grade the most stenotic level on axial T2-weighted MRI.", unit: "Schizas",
+  items: [{ id: "g", label: "Dural sac appearance", options: [
+    P("A1", "A1", "Rootlets lie dorsally and occupy less than half of the dural sac", "ok", undefined, "No or minor stenosis"),
+    P("A2", "A2", "Rootlets lie dorsally, in contact with the dura, in a horseshoe shape", "ok", undefined, "No or minor stenosis"),
+    P("A3", "A3", "Rootlets lie dorsally and occupy more than half of the dural sac", "ok", undefined, "No or minor stenosis"),
+    P("A4", "A4", "Rootlets lie centrally and occupy most of the dural sac", "ok", undefined, "No or minor stenosis"),
+    P("B", "B", "Rootlets fill the whole sac but can still be separated; some CSF remains", "warn", undefined, "Moderate stenosis"),
+    P("C", "C", "No rootlets recognisable, no CSF; posterior epidural fat present", "crit", undefined, "Severe stenosis"),
+    P("D", "D", "No rootlets recognisable and no posterior epidural fat", "crit", undefined, "Extreme stenosis")] }],
+  notes: ["In the original study, grades C and D were linked with a higher chance of needing surgery."],
+  refs: ["Schizas C, Theumann N, Burn A, et al. Qualitative grading of severity of lumbar spinal stenosis based on the morphology of the dural sac on magnetic resonance images. Spine 2010;35:1919–1924."]
+}),
+pickCalc({
+  id: "lee-central", abbr: "Lee C", name: "Lee grade (lumbar central stenosis)", cat: "Spine: degenerative",
+  desc: "CSF space and cauda equina separation on axial T2", keywords: "lumbar central canal stenosis lee grade cauda equina mri", intro: "Grade the most stenotic level on axial T2-weighted MRI.", unit: "grade",
+  items: [{ id: "g", label: "Appearance", options: [
+    P(0, "Grade 0 — No stenosis", "No obliteration of the anterior CSF space", "ok"),
+    P(1, "Grade 1 — Mild", "Anterior CSF space mildly obliterated; all cauda equina roots clearly separate", "ok"),
+    P(2, "Grade 2 — Moderate", "Some roots aggregated and impossible to separate", "warn"),
+    P(3, "Grade 3 — Severe", "No CSF; the cauda equina appears as one bundle", "crit")] }],
+  refs: ["Lee GY, Lee JW, Choi HS, et al. A new grading system of lumbar central canal stenosis on MRI: an easy and reliable method. Skeletal Radiol 2011;40:1033–1039."]
+}),
+pickCalc({
+  id: "lee-foraminal", abbr: "Lee F", name: "Lee grade (lumbar foraminal stenosis)", cat: "Spine: degenerative",
+  desc: "Perineural fat and nerve root on sagittal T1", keywords: "lumbar foraminal stenosis lee grade nerve root perineural fat mri", intro: "Grade on sagittal T1-weighted MRI through the foramen.", unit: "grade",
+  items: [{ id: "g", label: "Appearance", options: [
+    P(0, "Grade 0 — Normal", "", "ok"),
+    P(1, "Grade 1 — Mild", "Perineural fat obliterated in two opposing directions (vertical or transverse), root not deformed", "ok"),
+    P(2, "Grade 2 — Moderate", "Perineural fat obliterated in all four directions, root not deformed", "warn"),
+    P(3, "Grade 3 — Severe", "Nerve root collapsed or deformed", "crit")] }],
+  refs: ["Lee S, Lee JW, Yeom JS, et al. A practical MRI grading system for lumbar foraminal stenosis. AJR Am J Roentgenol 2010;194:1095–1098."]
+}),
+pickCalc({
+  id: "kang", abbr: "Kang", name: "Kang grade (cervical canal stenosis)", cat: "Spine: degenerative",
+  desc: "Cervical stenosis grade on sagittal T2 MRI", keywords: "cervical canal stenosis kang grade cord compression signal change mri myelopathy", intro: "Grade the most stenotic level on sagittal T2-weighted MRI.", unit: "grade",
+  items: [{ id: "g", label: "Appearance", options: [
+    P(0, "Grade 0 — No stenosis", "", "ok"),
+    P(1, "Grade 1", "More than 50% of the subarachnoid space obliterated, no cord deformity", "ok"),
+    P(2, "Grade 2", "Spinal cord deformity, no signal change", "warn"),
+    P(3, "Grade 3", "Increased T2 cord signal near the compressed level", "crit")] }],
+  refs: ["Kang Y, Lee JW, Koh YH, et al. New MRI grading system for the cervical canal stenosis. AJR Am J Roentgenol 2011;197:W134–W140."]
+}),
+{
+  id: "torg-pavlov", abbr: "T-P", name: "Torg–Pavlov ratio", cat: "Spine: degenerative",
+  desc: "Developmental narrowing of the cervical canal", keywords: "torg pavlov ratio cervical canal stenosis congenital developmental",
+  intro: "Measure at the same level on a lateral cervical radiograph.",
+  items: [{ id: "m", type: "numbers", label: "Measurements (mm)", fields: [
+    { id: "canal", label: "Canal: back of body to spinolaminar line" }, { id: "body", label: "Vertebral body AP diameter" }] }],
+  compute: function (a) {
+    var c = num(a, "canal"), b = num(a, "body");
+    if (!c || !b) return { complete: false, remaining: (c ? 0 : 1) + (b ? 0 : 1) };
+    var r = c / b, s = r.toFixed(2);
+    return r < 0.8
+      ? { complete: true, score: s, unit: "ratio", level: "warn", label: "Developmentally narrow canal", detail: "Ratio < 0.8", summary: "Torg–Pavlov ratio " + s + " (< 0.8)" }
+      : { complete: true, score: s, unit: "ratio", level: "ok", label: "Not narrowed by this ratio", detail: "Ratio ≥ 0.8", summary: "Torg–Pavlov ratio " + s + " (≥ 0.8)" };
+  },
+  notes: ["The ratio cancels radiographic magnification but has a high false-positive rate in large athletes with big vertebral bodies."],
+  refs: ["Pavlov H, Torg JS, Robie B, Jahre C. Cervical spinal stenosis: determination with vertebral body ratio method. Radiology 1987;164:771–775."]
+},
+pickCalc({
+  id: "k-line", abbr: "K-line", name: "K-line (cervical OPLL)", cat: "Spine: degenerative",
+  desc: "Predicts benefit of laminoplasty in OPLL", keywords: "k-line opll ossification posterior longitudinal ligament laminoplasty", intro: "Draw a line joining the canal midpoints at C2 and C7 on a neutral lateral radiograph.", unit: "K-line",
+  items: [{ id: "k", label: "OPLL relative to the K-line", options: [
+    P("+", "K-line (+)", "OPLL does not cross the line", "ok", "+", "Posterior decompression likely adequate"),
+    P("−", "K-line (−)", "OPLL crosses the line", "crit", "−", "Poor recovery expected after laminoplasty alone; consider anterior or fusion surgery")] }],
+  refs: ["Fujiyoshi T, Yamazaki M, Kawabe J, et al. A new concept for making decisions regarding the surgical approach for cervical ossification of the posterior longitudinal ligament: the K-line. Spine 2008;33:E990–E993."]
+}),
+pickCalc({
+  id: "weishaupt", abbr: "Weish", name: "Weishaupt facet arthrosis grade", cat: "Spine: degenerative",
+  desc: "Lumbar facet degeneration on CT or MRI", keywords: "facet joint arthrosis degeneration weishaupt lumbar", intro: "Grade the facet joint on axial images.", unit: "grade",
+  items: [{ id: "g", label: "Facet appearance", options: [
+    P(0, "Grade 0 — Normal", "Joint space 2–4 mm", "ok"),
+    P(1, "Grade 1 — Mild", "Narrowing (< 2 mm), small osteophytes, or mild articular hypertrophy", "ok"),
+    P(2, "Grade 2 — Moderate", "Narrowing, moderate osteophytes or hypertrophy, mild subarticular erosions", "warn"),
+    P(3, "Grade 3 — Severe", "Narrowing, large osteophytes, severe hypertrophy, severe erosions or subchondral cysts", "crit")] }],
+  refs: ["Weishaupt D, Zanetti M, Boos N, Hodler J. MR imaging and CT in osteoarthritis of the lumbar facet joints. Skeletal Radiol 1999;28:215–219."]
+}),
+{
+  id: "msu", abbr: "MSU", name: "MSU classification (lumbar disc herniation)", cat: "Spine: degenerative",
+  desc: "Size and location of a disc herniation on axial MRI", keywords: "msu michigan state university disc herniation classification size location intra-facet line",
+  intro: "Draw the intra-facet line between the medial edges of the facet joints at the level of maximal extrusion on axial T2.",
+  items: [
+    { id: "size", label: "Size", options: [
+      opt(1, "1 — Up to 50% of the distance to the intra-facet line"),
+      opt(2, "2 — More than 50%, up to the intra-facet line"),
+      opt(3, "3 — Beyond the intra-facet line")] },
+    { id: "loc", label: "Location", hint: "The intra-facet line is divided into four quarters; the two central quarters are zone A.", options: [
+      opt("A", "A — Central"), opt("AB", "AB — Spanning central and lateral zones"),
+      opt("B", "B — Lateral (subarticular)"), opt("C", "C — Beyond the facet (foraminal or far lateral)")] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["size", "loc"]);
+    if (n) return { complete: false, remaining: n };
+    var code = a.size + "-" + a.loc;
+    var surg = (code === "2-B" || code === "2-AB");
+    return { complete: true, score: code, unit: "MSU", level: a.size === 1 ? "ok" : a.size === 2 ? "warn" : "crit",
+      label: a.size === 1 ? "Small herniation" : a.size === 2 ? "Moderate herniation" : "Large herniation",
+      detail: surg ? "2-B and 2-AB were the types most often operated on in the original series" : "Combine with symptoms and examination",
+      summary: "MSU classification " + code };
+  },
+  refs: ["Mysliwiec LW, Cholewicki J, Winkelpleck MD, Eis GP. MSU classification for herniated lumbar discs on MRI: toward developing objective criteria for surgical selection. Eur Spine J 2010;19:1087–1093."]
+},
+
+/* ---------- Spine: tumour ---------- */
+pickCalc({
+  id: "bilsky", abbr: "ESCC", name: "Bilsky ESCC grade", cat: "Spine: tumour",
+  desc: "Epidural spinal cord compression by tumour", keywords: "bilsky escc epidural spinal cord compression metastasis noms separation surgery", intro: "Grade on axial T2-weighted MRI at the most compressed level.", unit: "ESCC",
+  items: [{ id: "g", label: "Compression", options: [
+    P("0", "Grade 0", "Bone-only disease", "ok", "0", "Low-grade compression"),
+    P("1a", "Grade 1a", "Epidural impingement without deformation of the thecal sac", "ok", "1a", "Low-grade compression"),
+    P("1b", "Grade 1b", "Deformation of the thecal sac without abutting the cord", "ok", "1b", "Low-grade compression"),
+    P("1c", "Grade 1c", "Deformation of the thecal sac, abutting the cord without compression", "warn", "1c", "Low-grade compression"),
+    P("2", "Grade 2", "Cord compression with CSF still visible around the cord", "crit", "2", "High-grade compression"),
+    P("3", "Grade 3", "Cord compression with no CSF around the cord", "crit", "3", "High-grade compression")] }],
+  notes: ["In the NOMS framework, high-grade compression from a radioresistant tumour usually needs surgical decompression before radiosurgery."],
+  refs: ["Bilsky MH, Laufer I, Fourney DR, et al. Reliability analysis of the epidural spinal cord compression scale. J Neurosurg Spine 2010;13:324–328."]
+}),
+sumCalc({
+  id: "tokuhashi", abbr: "Toku", name: "Revised Tokuhashi score", cat: "Spine: tumour",
+  desc: "Expected survival with spinal metastases", keywords: "tokuhashi spinal metastasis prognosis survival score revised", intro: "Score at the time of assessment for surgery.", outOf: 15,
+  items: [
+    { id: "kps", label: "General condition (KPS)", options: [opt("poor", "Poor, KPS 10–40%", 0), opt("mod", "Moderate, KPS 50–70%", 1), opt("good", "Good, KPS 80–100%", 2)] },
+    { id: "ebm", label: "Extraspinal bone metastases", options: [opt("ge3", "≥ 3", 0), opt("1-2", "1–2", 1), opt("0", "None", 2)] },
+    { id: "vbm", label: "Vertebral body metastases", options: [opt("ge3", "≥ 3", 0), opt("2", "2", 1), opt("1", "1", 2)] },
+    { id: "org", label: "Metastases to major internal organs", options: [opt("unrem", "Unremovable", 0), opt("rem", "Removable", 1), opt("none", "None", 2)] },
+    { id: "prim", label: "Primary site", options: [
+      opt("g0", "Lung, osteosarcoma, stomach, bladder, oesophagus, pancreas", 0),
+      opt("g1", "Liver, gallbladder, unidentified", 1),
+      opt("g2", "Others", 2),
+      opt("g3", "Kidney, uterus", 3),
+      opt("g4", "Rectum", 4),
+      opt("g5", "Thyroid, breast, prostate, carcinoid", 5)] },
+    { id: "palsy", label: "Spinal cord palsy (Frankel)", options: [opt("complete", "Complete (A, B)", 0), opt("incomplete", "Incomplete (C, D)", 1), opt("none", "None (E)", 2)] }
+  ],
+  bands: [[8, "Expected survival < 6 months", "crit"], [11, "Expected survival ≥ 6 months", "warn"], [15, "Expected survival ≥ 1 year", "ok"]],
+  post: function (r, a, t) { r.detail = t <= 8 ? "Conservative treatment or palliative surgery" : t <= 11 ? "Palliative surgery; excision in selected cases" : "Excisional surgery can be considered"; },
+  refs: ["Tokuhashi Y, Matsuzaki H, Oda H, et al. A revised scoring system for preoperative evaluation of metastatic spine tumor prognosis. Spine 2005;30:2186–2191."]
+}),
+sumCalc({
+  id: "tomita", abbr: "Tomita", name: "Tomita score", cat: "Spine: tumour",
+  desc: "Surgical strategy for spinal metastases", keywords: "tomita spinal metastasis surgical strategy en bloc palliative score", intro: "Three prognostic factors, total 2–10.", outOf: 10,
+  items: [
+    { id: "prim", label: "Primary tumour growth", options: [opt("slow", "Slow (breast, prostate, thyroid, etc.)", 1), opt("mod", "Moderate (kidney, uterus, etc.)", 2), opt("rapid", "Rapid (lung, liver, stomach, colon, unknown primary, etc.)", 4)] },
+    { id: "visc", label: "Visceral metastases", options: [opt("none", "None", 0), opt("treat", "Treatable (surgery or embolisation)", 2), opt("untreat", "Untreatable", 4)] },
+    { id: "bone", label: "Bone metastases (including spine)", options: [opt("sol", "Solitary or isolated", 1), opt("mult", "Multiple", 2)] }
+  ],
+  bands: [[3, "Long-term local control", "ok"], [5, "Middle-term local control", "ok"], [7, "Short-term palliation", "warn"], [10, "Terminal care", "crit"]],
+  post: function (r, a, t) { r.detail = t <= 3 ? "Wide or marginal excision" : t <= 5 ? "Marginal or intralesional excision" : t <= 7 ? "Palliative surgery" : "Non-operative supportive care"; },
+  refs: ["Tomita K, Kawahara N, Kobayashi T, et al. Surgical strategy for spinal metastases. Spine 2001;26:298–306."]
+})
+];
+
+CALCS = CALCS.concat(MORE).concat(SPINE);
+CALCS.forEach(function (c) {
+  if (c.scale) c.items.forEach(function (i) { if (!i.options && !i.type) { i.options = c.scale; i.compact = true; } });
+});
+var FIELDS = [
+  { name: "Neurosurgery", cats: ["Head injury & coma", "Cerebrovascular", "Spine trauma", "Spine: stability & deformity", "Spine: degenerative", "Spine: tumour", "Neuro-oncology & skull base", "Hydrocephalus & subdural"] },
+  { name: "Neurology", cats: ["Stroke, TIA & SAH", "Neuromuscular", "Movement & tone", "Seizures & ICU"] },
+  { name: "Psychiatry", cats: ["Depression & anxiety", "Substance use", "Psychopharmacology"] }
+];
+var CATS = [].concat.apply([], FIELDS.map(function (f) { return f.cats; }));
+if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, FIELDS: FIELDS };
+</script>
+
+<script>
+/* ===== UI ===== */
+(function () {
+  var app = document.getElementById("app");
+  var toastEl = document.getElementById("toast");
+  var answers = {};      // per-calculator answers, kept while the page is open
+  var helperVals = {};   // ABC/2 inputs
+  var query = "";
+
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  var favs = store.get("nss-favs", []);
+  var acknowledged = store.get("nss-ack", false);
+  var field = store.get("nss-field", "All");
+
+  var ICON = {
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+    chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>',
+    starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>'
+  };
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function byId(id) { return CALCS.find(function (c) { return c.id === id; }); }
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.classList.add("show");
+    clearTimeout(toast.t); toast.t = setTimeout(function () { toastEl.classList.remove("show"); }, 1600);
+  }
+  function fmtPts(p) {
+    if (p === null || p === undefined) return "";
+    if (p < 0 || Object.is(p, -0)) return "−" + Math.abs(p);
+    return "+" + p;
+  }
+
+  /* ---------- home ---------- */
+  function rowHtml(c) {
+    var fav = favs.indexOf(c.id) !== -1;
+    return '<a class="row" href="#' + c.id + '">' +
+      '<span class="abbr">' + esc(c.abbr) + '</span>' +
+      '<span class="txt"><span class="name">' + esc(c.name) + (fav ? '<span class="star" aria-label="Starred">★</span>' : '') + '</span>' +
+      '<span class="desc">' + esc(c.desc) + '</span></span>' +
+      '<span class="chev">' + ICON.chev + '</span></a>';
+  }
+  function renderHome() {
+    document.title = "NeuroSpine Scores";
+    var q = query.trim().toLowerCase();
+    var match = function (c) { return !q || (c.name + " " + c.abbr + " " + c.desc + " " + c.keywords + " " + c.cat).toLowerCase().indexOf(q) !== -1; };
+    var html = '<header class="topbar"><span class="mark">NS</span><div class="brand"><h1>NeuroSpine Scores</h1><p>Neurosurgery, neurology and psychiatry calculators</p></div></header>';
+    if (!acknowledged) {
+      html += '<div class="notice" id="notice"><p>For healthcare professionals. These scores support clinical judgment and do not replace it.</p><button type="button" id="ack">Got it</button></div>';
+    }
+    html += '<div class="search">' + ICON.search + '<input id="q" type="search" placeholder="Search, e.g. burst, NIHSS, PHQ-9" aria-label="Search scores" value="' + esc(query) + '"></div>';
+    html += '<div class="chips" role="group" aria-label="Filter by specialty">' +
+      ["All"].concat(FIELDS.map(function (f) { return f.name; })).map(function (n) {
+        var count = n === "All" ? CALCS.length : CALCS.filter(function (c) { return fieldOf(c) === n; }).length;
+        return '<button type="button" class="chip" data-field="' + esc(n) + '" aria-pressed="' + (field === n) + '">' + esc(n) + ' <span>' + count + '</span></button>';
+      }).join("") + '</div>';
+    var shown = 0;
+    var inField = function (c) { return field === "All" || fieldOf(c) === field; };
+    var favCalcs = CALCS.filter(function (c) { return favs.indexOf(c.id) !== -1 && match(c) && inField(c); });
+    if (favCalcs.length) {
+      html += '<section class="group"><h2>Starred</h2><div class="list">' + favCalcs.map(rowHtml).join("") + '</div></section>';
+    }
+    FIELDS.forEach(function (f) {
+      if (field !== "All" && field !== f.name) return;
+      var fieldHtml = "";
+      f.cats.forEach(function (cat) {
+        var list = CALCS.filter(function (c) { return c.cat === cat && match(c); });
+        shown += list.length;
+        if (list.length) fieldHtml += '<section class="group"><h2>' + esc(cat) + '</h2><div class="list">' + list.map(rowHtml).join("") + '</div></section>';
+      });
+      if (fieldHtml) html += '<h2 class="fieldhead">' + esc(f.name) + '</h2>' + fieldHtml;
+    });
+    if (!shown) html += '<p class="empty">No score matches “' + esc(query) + '”' + (field !== "All" ? ' in ' + esc(field) : '') + '.</p>';
+    html += '<p class="foot">' + CALCS.length + ' scores. Each calculator lists its original references. Check results against your local protocols.</p>';
+    app.innerHTML = html;
+    document.getElementById("result") && document.getElementById("result").remove();
+    var qi = document.getElementById("q");
+    qi.addEventListener("input", function () {
+      query = qi.value;
+      var pos = qi.selectionStart;
+      renderHome();
+      var n = document.getElementById("q"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {}
+    });
+    var ack = document.getElementById("ack");
+    if (ack) ack.addEventListener("click", function () { acknowledged = true; store.set("nss-ack", true); document.getElementById("notice").remove(); });
+    app.querySelectorAll("[data-field]").forEach(function (b) {
+      b.addEventListener("click", function () { field = b.dataset.field; store.set("nss-field", field); renderHome(); });
+    });
+  }
+  function fieldOf(c) {
+    var f = FIELDS.find(function (x) { return x.cats.indexOf(c.cat) !== -1; });
+    return f ? f.name : "";
+  }
+
+  /* ---------- calculator ---------- */
+  function isActive(item, a) { return !item.when || item.when(a); }
+
+  function renderCalc(c) {
+    document.title = c.name + " · NeuroSpine Scores";
+    var a = answers[c.id] || (answers[c.id] = {});
+    var fav = favs.indexOf(c.id) !== -1;
+    var html = '<header class="topbar">' +
+      '<a class="iconbtn" href="#" aria-label="All scores">' + ICON.back + '</a>' +
+      '<div class="calc-title"><h1>' + esc(c.name) + '</h1><p>' + esc(c.cat) + '</p></div>' +
+      '<button type="button" class="iconbtn" id="fav" aria-pressed="' + fav + '" aria-label="Star this score">' + (fav ? ICON.star : ICON.starO) + '</button>' +
+      '</header>';
+    html += '<p class="intro">' + esc(c.intro) + '</p>';
+    if (c.scale) {
+      html += '<p class="legend"><strong>Scale:</strong> ' + c.scale.map(function (o) { return o.v + " = " + esc(o.label); }).join(" · ") + '</p>';
+    }
+    html += '<div class="items">';
+    c.items.forEach(function (item) {
+      var active = isActive(item, a);
+      html += '<section class="item' + (active ? '' : ' skipped') + '" aria-labelledby="h-' + item.id + '">';
+      html += '<div class="item-head"><h3 id="h-' + item.id + '">' + esc(item.label) + '</h3>' +
+        (item.tag ? '<span class="tag">' + esc(item.tag) + '</span>' : (!active ? '<span class="tag">Not needed</span>' : '')) + '</div>';
+      if (item.hint) html += '<p class="hint">' + esc(item.hint) + '</p>';
+      if (item.type === "toggle") {
+        var on = !!a[item.id];
+        html += '<div class="opts"><button type="button" class="opt check" data-toggle="' + item.id + '" aria-pressed="' + on + '">' +
+          '<span class="dot"></span><span class="otext"><span class="olabel">' + esc(item.toggle.label) + '</span>' +
+          (item.toggle.sub ? '<span class="osub">' + esc(item.toggle.sub) + '</span>' : '') + '</span>' +
+          '<span class="pts">' + (item.toggle.pts !== undefined ? fmtPts(item.toggle.pts) : '') + '</span></button></div>';
+      } else if (item.type === "checks") {
+        html += '<div class="opts">';
+        item.checks.forEach(function (ch) {
+          var on = !!a[ch.id];
+          html += '<button type="button" class="opt check" data-check="' + ch.id + '" aria-pressed="' + on + '">' +
+            '<span class="dot"></span><span class="otext"><span class="olabel">' + esc(ch.label) + '</span>' +
+            (ch.sub ? '<span class="osub">' + esc(ch.sub) + '</span>' : '') + '</span>' +
+            '<span class="pts">' + (ch.pts ? fmtPts(ch.pts) : '') + '</span></button>';
+        });
+        html += '</div>';
+      } else if (item.type === "numbers") {
+        html += '<div class="helper nums"><div class="fields fields-' + item.fields.length + '">';
+        item.fields.forEach(function (f) {
+          var v = a[f.id];
+          html += '<label for="n-' + f.id + '">' + esc(f.label) + '<input id="n-' + f.id + '" data-num="' + f.id + '" inputmode="decimal" value="' + (typeof v === "number" ? v : "") + '"></label>';
+        });
+        html += '</div></div>';
+      } else if (item.compact) {
+        var selOpt = item.options.find(function (o) { return o.v === a[item.id]; });
+        html += '<div class="seg" role="radiogroup" aria-labelledby="h-' + item.id + '">';
+        item.options.forEach(function (o, idx) {
+          var sel = a[item.id] === o.v;
+          html += '<button type="button" class="segbtn" role="radio" aria-checked="' + sel + '" aria-label="' + esc(o.v + ": " + o.label) + '"' + (active ? '' : ' disabled') +
+            ' data-item="' + item.id + '" data-idx="' + idx + '">' + esc(o.v) + '</button>';
+        });
+        html += '</div><div class="segsel">' + (selOpt ? esc(selOpt.label) : '<span>Not answered</span>') + '</div>';
+      } else {
+        html += '<div class="opts" role="radiogroup" aria-labelledby="h-' + item.id + '">';
+        item.options.forEach(function (o, idx) {
+          var sel = a[item.id] === o.v;
+          html += '<button type="button" class="opt" role="radio" aria-checked="' + sel + '"' + (active ? '' : ' disabled') +
+            ' data-item="' + item.id + '" data-idx="' + idx + '">' +
+            '<span class="dot"></span><span class="otext"><span class="olabel">' + esc(o.label) + '</span>' +
+            (o.sub ? '<span class="osub">' + esc(o.sub) + '</span>' : '') + '</span>' +
+            '<span class="pts">' + fmtPts(o.pts) + '</span></button>';
+        });
+        html += '</div>';
+      }
+      if (item.helper === "abc2") {
+        var h = helperVals[c.id] || {};
+        html += '<div class="helper"><h4>ABC/2 volume helper</h4><div class="fields">' +
+          '<label for="abc-a">A (cm)<input id="abc-a" inputmode="decimal" value="' + esc(h.a || "") + '"></label>' +
+          '<label for="abc-b">B (cm)<input id="abc-b" inputmode="decimal" value="' + esc(h.b || "") + '"></label>' +
+          '<label for="abc-c">C (cm)<input id="abc-c" inputmode="decimal" value="' + esc(h.c || "") + '"></label>' +
+          '</div><div class="out" id="abc-out">' + abcText(h) + '</div>' +
+          '<div class="small">C = slices with blood × slice thickness in cm (e.g., 6 slices × 0.5 cm = 3).</div></div>';
+      }
+      html += '</section>';
+    });
+    html += '</div>';
+    if (c.notes && c.notes.length) html += '<section class="block"><h2>Notes</h2><ul>' + c.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join("") + '</ul></section>';
+    if (c.refs && c.refs.length) html += '<section class="block"><h2>References</h2><ul>' + c.refs.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join("") + '</ul></section>';
+    html += '<div class="spacer"></div>';
+    app.innerHTML = html;
+
+    var bar = document.getElementById("result");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "result"; bar.className = "result";
+      bar.setAttribute("aria-live", "polite");
+      document.body.appendChild(bar);
+    }
+    updateResult(c);
+
+    app.querySelectorAll("[data-item]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var item = c.items.find(function (i) { return i.id === btn.dataset.item; });
+        var o = item.options[+btn.dataset.idx];
+        a[item.id] = o.v;
+        clearInactive(c, a);
+        rerenderKeepScroll(c);
+      });
+    });
+    app.querySelectorAll("[data-check]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        a[btn.dataset.check] = !a[btn.dataset.check];
+        rerenderKeepScroll(c);
+      });
+    });
+    app.querySelectorAll("[data-num]").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        var v = parseFloat(inp.value.replace(",", "."));
+        if (isFinite(v)) a[inp.dataset.num] = v; else delete a[inp.dataset.num];
+        updateResult(c);
+      });
+    });
+    app.querySelectorAll("[data-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        a[btn.dataset.toggle] = !a[btn.dataset.toggle];
+        rerenderKeepScroll(c);
+      });
+    });
+    var favBtn = document.getElementById("fav");
+    favBtn.addEventListener("click", function () {
+      var i = favs.indexOf(c.id);
+      if (i === -1) favs.push(c.id); else favs.splice(i, 1);
+      store.set("nss-favs", favs);
+      toast(i === -1 ? "Added to Starred" : "Removed from Starred");
+      rerenderKeepScroll(c);
+    });
+    ["a", "b", "c"].forEach(function (k) {
+      var inp = document.getElementById("abc-" + k);
+      if (!inp) return;
+      inp.addEventListener("input", function () {
+        var h = helperVals[c.id] || (helperVals[c.id] = {});
+        h[k] = inp.value;
+        document.getElementById("abc-out").innerHTML = abcText(h);
+        var v = abcVol(h);
+        if (v !== null) {
+          var want = v >= 30 ? "ge30" : "lt30";
+          if (a.vol !== want) {
+            a.vol = want;
+            app.querySelectorAll('[data-item="vol"]').forEach(function (b) {
+              var o = c.items.find(function (i) { return i.id === "vol"; }).options[+b.dataset.idx];
+              b.setAttribute("aria-checked", String(o.v === want));
+            });
+          }
+          updateResult(c);
+        }
+      });
+    });
+  }
+  function abcVol(h) {
+    var A = parseFloat(String(h.a || "").replace(",", ".")), B = parseFloat(String(h.b || "").replace(",", ".")), C = parseFloat(String(h.c || "").replace(",", "."));
+    if (!(A > 0 && B > 0 && C > 0)) return null;
+    return A * B * C / 2;
+  }
+  function abcText(h) {
+    var v = abcVol(h);
+    if (v === null) return '<span style="color:var(--muted)">Enter A, B and C to estimate the volume.</span>';
+    return 'Estimated volume <strong>' + v.toFixed(1) + ' mL</strong> → ' + (v >= 30 ? '≥ 30 mL selected' : '< 30 mL selected');
+  }
+  function clearInactive(c, a) {
+    c.items.forEach(function (item) { if (!isActive(item, a)) delete a[item.id]; });
+  }
+  function rerenderKeepScroll(c) {
+    var y = window.scrollY;
+    renderCalc(c);
+    window.scrollTo(0, y);
+  }
+  function updateResult(c) {
+    var a = answers[c.id] || {};
+    var r = c.compute(a);
+    var bar = document.getElementById("result");
+    if (!r.complete) {
+      bar.dataset.level = "";
+      bar.innerHTML = '<div class="result-in"><span class="stripe"></span><div class="res-body">' +
+        '<div class="res-score" style="color:var(--muted)">–</div><div class="res-text"><div class="res-label" style="color:var(--muted)">' +
+        (r.remaining === 1 ? "Answer 1 more item" : "Answer " + r.remaining + " more items") + '</div>' +
+        '<div class="res-detail">The result updates as you tap.</div></div></div>' +
+        '<div class="res-actions"><button type="button" id="reset">Reset</button></div></div>';
+    } else {
+      bar.dataset.level = r.level;
+      bar.innerHTML = '<div class="result-in"><span class="stripe"></span><div class="res-body">' +
+        '<div class="res-score">' + esc(r.score) + '<small>' + esc(r.unit) + '</small></div>' +
+        '<div class="res-text"><div class="res-label">' + esc(r.label) + '</div>' +
+        (r.detail ? '<div class="res-detail">' + esc(r.detail) + '</div>' : '') + '</div></div>' +
+        '<div class="res-actions"><button type="button" id="copy">Copy</button><button type="button" id="reset">Reset</button></div></div>';
+      document.getElementById("copy").addEventListener("click", function () {
+        var text = r.summary;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { toast("Copied: " + text); }, function () { toast(text); });
+        } else { toast(text); }
+      });
+    }
+    document.getElementById("reset").addEventListener("click", function () {
+      answers[c.id] = {}; helperVals[c.id] = {};
+      renderCalc(c); window.scrollTo(0, 0);
+    });
+  }
+
+  /* ---------- routing ---------- */
+  function route() {
+    var id = (location.hash || "").replace(/^#/, "");
+    var c = id && byId(id);
+    if (c) { renderCalc(c); window.scrollTo(0, 0); }
+    else { renderHome(); }
+  }
+  window.addEventListener("hashchange", route);
+  route();
+
+  /* ---------- offline support (works when hosted on your own https site) ---------- */
+  try {
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      window.addEventListener("load", function () {
+        try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {}
+      });
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
