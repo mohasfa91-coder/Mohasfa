@@ -1,6 +1,6 @@
 {
   "id": "./",
-  "name": "NeuroSpine Scores",
+  "name": "NeuroSpine Calculator",
   "short_name": "NeuroSpine",
   "description": "91 neurosurgery, neurology and psychiatry scores and calculators for clinicians, with original references. Works offline.",
   "start_url": "./",

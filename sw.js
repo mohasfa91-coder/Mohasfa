@@ -1,6 +1,6 @@
-/* NeuroSpine Scores service worker: offline support.
+/* NeuroSpine Calculator service worker: offline support.
    Change CACHE when you publish a new version so phones fetch the update. */
-var CACHE = "nss-v4";
+var CACHE = "nss-v5";
 var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png"];
 
 self.addEventListener("install", function (event) {
@@ -25,7 +25,8 @@ self.addEventListener("fetch", function (event) {
   // Pages: try the network first so updates arrive, fall back to the cached app offline.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).then(function (res) {
+      fetch(req.url, { cache: "no-store", credentials: "same-origin" }).then(function (res) {
+        if (!res.ok) throw new Error("bad status");
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put("index.html", copy); });
         return res;

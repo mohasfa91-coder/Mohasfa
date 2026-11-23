@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b6e66">
 <meta name="description" content="Neurosurgery, neurology and psychiatry scores and calculators for clinicians.">
-<title>NeuroSpine Scores</title>
+<title>NeuroSpine Calculator</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -2295,10 +2295,10 @@ if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, 
       '<span class="chev">' + ICON.chev + '</span></a>';
   }
   function renderHome() {
-    document.title = "NeuroSpine Scores";
+    document.title = "NeuroSpine Calculator";
     var q = query.trim().toLowerCase();
     var match = function (c) { return !q || (c.name + " " + c.abbr + " " + c.desc + " " + c.keywords + " " + c.cat).toLowerCase().indexOf(q) !== -1; };
-    var html = '<header class="topbar"><span class="mark">NS</span><div class="brand"><h1>NeuroSpine Scores</h1><p>Neurosurgery, neurology and psychiatry calculators</p></div></header>';
+    var html = '<header class="topbar"><span class="mark">NS</span><div class="brand"><h1>NeuroSpine Calculator</h1><p>Neurosurgery, neurology and psychiatry calculators</p></div></header>';
     if (!acknowledged) {
       html += '<div class="notice" id="notice"><p>For healthcare professionals. These scores support clinical judgment and do not replace it.</p><button type="button" id="ack">Got it</button></div>';
     }
@@ -2350,7 +2350,7 @@ if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, 
   function isActive(item, a) { return !item.when || item.when(a); }
 
   function renderCalc(c) {
-    document.title = c.name + " · NeuroSpine Scores";
+    document.title = c.name + " · NeuroSpine Calculator";
     var a = answers[c.id] || (answers[c.id] = {});
     var fav = favs.indexOf(c.id) !== -1;
     var html = '<header class="topbar">' +
@@ -2560,7 +2560,15 @@ if (typeof module !== "undefined") module.exports = { CALCS: CALCS, CATS: CATS, 
   try {
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
       window.addEventListener("load", function () {
-        try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {}
+        try {
+          navigator.serviceWorker.register("sw.js").then(function (reg) {
+            /* look for a new version every time the app is opened or brought back to the screen */
+            try { reg.update(); } catch (e) {}
+            document.addEventListener("visibilitychange", function () {
+              if (document.visibilityState === "visible") { try { reg.update(); } catch (e) {} }
+            });
+          }).catch(function () {});
+        } catch (e) {}
       });
     }
   } catch (e) {}
