@@ -246,7 +246,34 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 .chip span { color: var(--muted); font-family: var(--font-mono); font-size: 12px; margin-left: 2px; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .chip[aria-pressed="true"] span { color: var(--accent-ink); opacity: .85; }
-.fieldhead { font-size: 20px; margin: 26px 2px -8px; }
+.fieldhead { font-size: 18px; margin: 22px 2px -10px; color: var(--accent); }
+/* home: big section headings and tool tiles */
+.sechead { display: flex; align-items: baseline; gap: 8px; font-size: 23px; margin: 24px 0 10px; padding-left: 10px; border-left: 4px solid var(--accent); line-height: 1.15; }
+.sechead span { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--muted); }
+.sechead + .chips { margin-top: 4px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tile { display: flex; flex-direction: column; gap: 5px; min-width: 0; min-height: 116px; padding: 11px 10px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); color: inherit; text-decoration: none; }
+.tile:hover, .tile:active { background: var(--accent-soft); border-color: var(--accent); }
+.tile .tabbr { align-self: flex-start; padding: 4px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent);
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; }
+.tile .tname { font-weight: 600; font-size: 14.5px; line-height: 1.2; }
+.tile .tsub { font-size: 12px; color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 340px) { .tiles { grid-template-columns: 1fr 1fr; } }
+.sec-act { margin-left: auto; align-self: center; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px;
+  font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--accent); min-height: 34px; }
+.list.cats { margin-top: 18px; }
+details.cat { border-top: 1px solid var(--line); }
+details.cat:first-child { border-top: 0; }
+details.cat > summary { display: flex; align-items: center; gap: 10px; padding: 14px; min-height: 52px; cursor: pointer; list-style: none; }
+details.cat > summary::-webkit-details-marker { display: none; }
+details.cat .cname { flex: 1; min-width: 0; font-weight: 600; font-size: 15.5px; }
+details.cat .ccount { flex: none; padding: 2px 9px; border-radius: 999px; background: var(--bg); font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+details.cat .cchev { flex: none; display: grid; color: var(--muted); transition: transform .15s; }
+details.cat[open] > summary { background: var(--accent-soft); }
+details.cat[open] .cname { color: var(--accent); }
+details.cat[open] .cchev { transform: rotate(90deg); }
+.cat-body .row:first-child { border-top: 1px solid var(--line); }
 .legend { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 .legend strong { color: var(--ink); font-weight: 600; }
 .seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(30px, 1fr)); gap: 5px; }
@@ -301,7 +328,8 @@ h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
 .icd-tabs.four button { font-size: 14px; padding: 0 2px; }
 .item-head h2 { font-size: 17px; }
 /* keep cards opened by a link clear of the sticky top bar */
-details.lc, .group { scroll-margin-top: 96px; }
+details.lc, .group, details.cat { scroll-margin-top: 96px; }
+.sechead { scroll-margin-top: 150px; }
 svg.vf { flex: none; width: 118px; height: 60px; }
 .vf-bg { fill: var(--surface); }
 .vf-rim { fill: none; stroke: var(--muted); stroke-width: 1.2; }
@@ -3842,6 +3870,7 @@ var GUIDES = [
   var favs = store.get("nss-favs", []);
   var acknowledged = store.get("nss-ack", false);
   var field = store.get("nss-field", "All");
+  var openCats = store.get("nss-open", {});   // which calculator categories are open on the home screen
 
   var ICON = {
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
@@ -3882,13 +3911,17 @@ var GUIDES = [
     document.title = "NeuroSpine Calculator";
     var q = query.trim().toLowerCase();
     var match = function (c) { return !q || (c.name + " " + c.abbr + " " + c.desc + " " + c.keywords + " " + c.cat).toLowerCase().indexOf(q) !== -1; };
-    var html = '<header class="topbar"><span class="mark">NS</span><div class="brand"><h1>NeuroSpine Calculator</h1><p>Neurosurgery, neurology and psychiatry calculators</p></div></header>';
+    var html = '<header class="topbar"><span class="mark">NS</span><div class="brand"><h1>NeuroSpine Calculator</h1><p>Calculators, localizers, drug doses, guides and codes</p></div></header>';
     if (!acknowledged) {
       html += '<div class="notice" id="notice"><p>For healthcare professionals. These scores support clinical judgment and do not replace it.</p><button type="button" id="ack">Got it</button></div>';
     }
     html += '<div class="search">' + ICON.search + '<input id="q" type="search" placeholder="Search, e.g. burst, NIHSS, S06.5" aria-label="Search scores and codes" value="' + esc(query) + '"></div>';
+    /* section 1: tools and references (tiles), or matching tools while searching */
     var tools = homeTools(query);
-    if (tools.length) html += '<div class="list icd-entry">' + tools.join("") + '</div>';
+    if (!q) html += '<h2 class="sechead">Tools &amp; references</h2><div class="tiles">' + homeTiles().join("") + '</div>';
+    else if (tools.length) html += '<h2 class="sechead">Tools &amp; guides</h2><div class="list icd-entry">' + tools.join("") + '</div>';
+    /* section 2: calculators */
+    html += '<h2 class="sechead" id="calcs">Calculators <span>' + CALCS.length + '</span>' + (q ? '' : '<button type="button" class="sec-act" id="catall"></button>') + '</h2>';
     html += '<div class="chips" role="group" aria-label="Filter by specialty">' +
       ["All"].concat(FIELDS.map(function (f) { return f.name; })).map(function (n) {
         var count = n === "All" ? CALCS.length : CALCS.filter(function (c) { return fieldOf(c) === n; }).length;
@@ -3903,12 +3936,24 @@ var GUIDES = [
     FIELDS.forEach(function (f) {
       if (field !== "All" && field !== f.name) return;
       var fieldHtml = "";
-      f.cats.forEach(function (cat) {
-        var list = CALCS.filter(function (c) { return c.cat === cat && match(c); });
-        shown += list.length;
-        if (list.length) fieldHtml += '<section class="group"><h2>' + esc(cat) + '</h2><div class="list">' + list.map(rowHtml).join("") + '</div></section>';
-      });
-      if (fieldHtml) html += '<h2 class="fieldhead">' + esc(f.name) + '</h2>' + fieldHtml;
+      if (q) {
+        /* searching: show every match, grouped by category */
+        f.cats.forEach(function (cat) {
+          var list = CALCS.filter(function (c) { return c.cat === cat && match(c); });
+          shown += list.length;
+          if (list.length) fieldHtml += '<section class="group"><h2>' + esc(cat) + '</h2><div class="list">' + list.map(rowHtml).join("") + '</div></section>';
+        });
+        if (fieldHtml) html += '<h2 class="fieldhead">' + esc(f.name) + '</h2>' + fieldHtml;
+      } else {
+        /* browsing: one tappable row per category that opens to show its calculators */
+        f.cats.forEach(function (cat) {
+          var list = CALCS.filter(function (c) { return c.cat === cat; });
+          shown += list.length;
+          if (list.length) fieldHtml += '<details class="cat" data-cat="' + esc(cat) + '"' + (openCats[cat] ? ' open' : '') + '><summary><span class="cname">' + esc(cat) + '</span>' +
+            '<span class="ccount">' + list.length + '</span><span class="cchev">' + ICON.chev + '</span></summary><div class="cat-body">' + list.map(rowHtml).join("") + '</div></details>';
+        });
+        if (fieldHtml) html += '<h2 class="fieldhead">' + esc(f.name) + '</h2><div class="list cats">' + fieldHtml + '</div>';
+      }
     });
     if (!shown) html += '<p class="empty">No calculator matches “' + esc(query) + '”' + (field !== "All" ? ' in ' + esc(field) : '') + '.</p>';
     html += '<p class="foot">' + CALCS.length + ' scores. Each calculator lists its original references. Check results against your local protocols.</p>';
@@ -3927,6 +3972,21 @@ var GUIDES = [
         var n = document.getElementById("q"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {}
       }, 120);
     });
+    var cats = app.querySelectorAll("details.cat"), catAll = document.getElementById("catall");
+    var setCatAll = function () {
+      if (!catAll) return;
+      var allOpen = cats.length && [].every.call(cats, function (d) { return d.open; });
+      catAll.textContent = allOpen ? "Close all" : "Open all"; catAll.dataset.open = allOpen ? "1" : "";
+    };
+    cats.forEach(function (d) {
+      d.addEventListener("toggle", function () { openCats[d.dataset.cat] = d.open; store.set("nss-open", openCats); setCatAll(); });
+    });
+    if (catAll) catAll.addEventListener("click", function () {
+      var open = !catAll.dataset.open;
+      cats.forEach(function (d) { d.open = open; openCats[d.dataset.cat] = open; });
+      store.set("nss-open", openCats); setCatAll();
+    });
+    setCatAll();
     var ack = document.getElementById("ack");
     if (ack) ack.addEventListener("click", function () { acknowledged = true; store.set("nss-ack", true); document.getElementById("notice").remove(); });
     app.querySelectorAll("[data-field]").forEach(function (b) {
@@ -4763,6 +4823,20 @@ var GUIDES = [
   /* ---------- home: tool rows (localizers, drugs, guides, ICD) ---------- */
   function toolRow(href, abbr, name, desc) {
     return '<a class="row" href="' + href + '"><span class="abbr">' + abbr + '</span><span class="txt"><span class="name">' + name + '</span><span class="desc">' + desc + '</span></span><span class="chev">' + ICON.chev + '</span></a>';
+  }
+  function homeTiles() {
+    var tile = function (href, abbr, name, sub) {
+      return '<a class="tile" href="' + href + '"><span class="tabbr">' + abbr + '</span><span class="tname">' + name + '</span><span class="tsub">' + sub + '</span></a>';
+    };
+    var tr = guideById("trials"), nTr = tr ? tr.sections.reduce(function (n, s) { return n + (s.cards ? s.cards.length : 0); }, 0) : 0;
+    return [
+      tile("#loc", "LOC", "Nerve localizer", "Roots and peripheral nerves"),
+      tile("#cns", "CNS", "Brain &amp; eye", "Pupils, eye movements, fields, aphasia"),
+      tile("#drugs", "RX", "Drug doses", DRUGS.length + " drugs and interactions"),
+      tile("#guides", "GDE", "Guides", "Admissions, post-op, VTE, brain death"),
+      tile("#guide/trials", "RCT", "Landmark papers", nTr + " trials in brief"),
+      tile("#icd", "ICD", "ICD codes", (icdCount(icdMatches("", "dx")) + icdCount(icdMatches("", "px"))) + " ICD-10 and ICD-9 codes")
+    ];
   }
   function homeTools(query) {
     var q = query.trim(), rows = [];
