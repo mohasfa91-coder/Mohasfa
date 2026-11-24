@@ -1,7 +1,7 @@
 /* NeuroSpine Calculator service worker: offline support.
    © 2026 Dr. Mohammed Asfa. All rights reserved.
    Change CACHE when you publish a new version so phones fetch the update. */
-var CACHE = "nss-v17";
+var CACHE = "nss-v18";
 var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", function (event) {

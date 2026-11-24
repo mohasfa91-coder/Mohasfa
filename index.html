@@ -2609,13 +2609,519 @@ var ICU = [
 }
 ];
 
-CALCS = CALCS.concat(MORE).concat(SPINE).concat(ICU);
+
+/* ================= ADDED NOVEMBER 2026: 30 further scores ================= */
+function scoreItem(id, label, max, na) {
+  var o = []; for (var v = 0; v <= max; v++) o.push(opt(v, String(v), v));
+  if (na) o.push(opt("N/A", "Section skipped", null));
+  return { id: id, label: label, options: o, compact: true };
+}
+var EXTRA = [
+
+/* ---------- Head injury & coma ---------- */
+{
+  id: "pecarn", abbr: "PECARN", name: "PECARN paediatric head injury rule", cat: "Head injury & coma",
+  desc: "Which children with minor head trauma need a CT", keywords: "pecarn child children pediatric paediatric head injury ct kuppermann minor trauma",
+  intro: "For children with GCS 14–15 seen within 24 h of head trauma. Tick every finding present.",
+  items: [
+    { id: "age", label: "Age", options: [opt("u2", "Under 2 years"), opt("o2", "2 years or older")] },
+    { id: "hi", type: "checks", label: "High-risk findings", when: function (a) { return !!a.age; }, checks: [
+      { id: "h_ams", label: "GCS 14 or other signs of altered mental state", sub: "agitation, sleepiness, repeated questions, slow to respond" },
+      { id: "h_fx", label: "Palpable skull fracture (under 2) or signs of basal skull fracture (2 and over)" }] },
+    { id: "mid", type: "checks", label: "Intermediate-risk findings", when: function (a) { return !!a.age; }, checks: [
+      { id: "m_loc", label: "Loss of consciousness (under 2: 5 seconds or more; 2 and over: any)" },
+      { id: "m_mech", label: "Severe mechanism of injury", sub: "see notes" },
+      { id: "m_u2", label: "Under 2: occipital, parietal or temporal scalp haematoma, or not acting normally per parent" },
+      { id: "m_o2", label: "2 and over: vomiting or severe headache" }] }
+  ],
+  compute: function (a) {
+    if (!a.age) return { complete: false, remaining: 1 };
+    var u2 = a.age === "u2";
+    var hi = a.h_ams || a.h_fx;
+    var mid = a.m_loc || a.m_mech || (u2 ? a.m_u2 : a.m_o2);
+    if (hi) return { complete: true, score: "High", unit: "risk", level: "crit", label: "CT recommended",
+      detail: "Risk of clinically important TBI about " + (u2 ? "4.4%" : "4.3%"), summary: "PECARN (" + (u2 ? "< 2 y" : "≥ 2 y") + "): high risk — CT recommended" };
+    if (mid) return { complete: true, score: "Mid", unit: "risk", level: "warn", label: "Observation or CT",
+      detail: "Risk about 0.9%. Favour CT with several findings, worsening, age under 3 months or parental preference", summary: "PECARN: intermediate risk — observe or CT" };
+    return { complete: true, score: "Low", unit: "risk", level: "ok", label: "CT not recommended",
+      detail: "Risk under " + (u2 ? "0.02%" : "0.05%"), summary: "PECARN: very low risk — CT not recommended" };
+  },
+  notes: ["Severe mechanism: motor vehicle crash with ejection, a death or a rollover; pedestrian or unhelmeted cyclist hit by a motor vehicle; fall over 0.9 m (under 2) or 1.5 m (2 and over); head struck by a high-impact object.",
+    "Not for penetrating trauma, known brain tumours, ventricular shunts, bleeding disorders or pre-existing neurological disorders."],
+  refs: ["Kuppermann N, Holmes JF, Dayan PS, et al. Identification of children at very low risk of clinically-important brain injuries after head trauma. Lancet 2009;374:1160–1170."]
+},
+sumCalc({
+  id: "helsinki", abbr: "HCTS", name: "Helsinki CT score", cat: "Head injury & coma",
+  desc: "CT score for 6-month outcome in TBI", keywords: "helsinki ct tbi head injury prognosis suprasellar cistern raj",
+  intro: "Score the admission CT. Points can be negative (extradural haematoma).", unit: "HCTS", sumName: "Helsinki CT score",
+  items: [
+    { id: "sdh", label: "Subdural haematoma", options: [opt("no", "Absent", 0), opt("yes", "Present", 2)] },
+    { id: "ich", label: "Intracerebral haematoma or contusion", options: [opt("no", "Absent", 0), opt("yes", "Present", 2)] },
+    { id: "edh", label: "Extradural haematoma", options: [opt("no", "Absent", 0), opt("yes", "Present", -3)] },
+    { id: "size", label: "Mass lesion volume", options: [opt("s", "25 mL or less", 0), opt("l", "More than 25 mL", 2)] },
+    { id: "ivh", label: "Intraventricular haemorrhage", options: [opt("no", "Absent", 0), opt("yes", "Present", 3)] },
+    { id: "cis", label: "Suprasellar cisterns", options: [opt("n", "Normal", 0), opt("c", "Compressed", 1), opt("o", "Obliterated", 5)] }
+  ],
+  bands: [[14, "Range −3 to 14; higher scores mean higher mortality and worse outcome", "info"]],
+  notes: ["Developed in 869 patients; it outperformed the Marshall and Rotterdam scores in the original cohort.", "Combine with clinical models (IMPACT, CRASH) for prognosis."],
+  refs: ["Raj R, Siironen J, Skrifvars MB, et al. Predicting outcome in traumatic brain injury: development of a novel computerized tomography classification system (Helsinki CT score). Neurosurgery 2014;75:632–647."]
+}),
+
+/* ---------- Cerebrovascular ---------- */
+{
+  id: "abc2", abbr: "ABC/2", name: "Haematoma volume (ABC/2)", cat: "Cerebrovascular",
+  desc: "Bedside volume of an intracerebral, extradural or other haematoma", keywords: "abc/2 abc2 volume ich haematoma hematoma edh sdh kothari ml cc",
+  intro: "A = longest diameter on the slice with the largest clot. B = widest diameter at 90° to A on the same slice. C = number of slices with blood × slice thickness (a slice with 75% or more of the largest area counts 1, 25–75% counts 0.5, under 25% counts 0).",
+  items: [
+    { id: "u", label: "Unit of A, B and C", compact: true, options: [opt("cm", "cm"), opt("mm", "mm")] },
+    { id: "m", type: "numbers", label: "Measurements", fields: [{ id: "a", label: "A" }, { id: "b", label: "B" }, { id: "c", label: "C" }] }
+  ],
+  compute: function (a) {
+    var x = num(a, "a"), y = num(a, "b"), z = num(a, "c");
+    var n = (a.u ? 0 : 1) + (x ? 0 : 1) + (y ? 0 : 1) + (z ? 0 : 1);
+    if (n) return { complete: false, remaining: n };
+    var f = a.u === "mm" ? 0.1 : 1, v = (x * f) * (y * f) * (z * f) / 2, s = v >= 10 ? Math.round(v) : Math.round(v * 10) / 10;
+    var band = v >= 60 ? ["60 mL or more", "crit"] : v >= 30 ? ["30 mL or more", "warn"] : v >= 15 ? ["15–29 mL", "info"] : ["Under 15 mL", "ok"];
+    return { complete: true, score: s, unit: "mL", level: band[1], label: band[0], detail: "ABC/2 = " + s + " mL", summary: "Haematoma volume (ABC/2) " + s + " mL" };
+  },
+  notes: ["ICH score adds a point at 30 mL or more; 60 mL or more with GCS 8 or less carries a very high 30-day mortality.",
+    "Extradural haematoma over 30 mL: evacuate regardless of GCS (BTF surgical guidelines).",
+    "Cerebellar haemorrhage of 15 mL or more, or with brainstem compression or hydrocephalus: consider evacuation (AHA/ASA 2022).",
+    "ABC/2 overestimates irregular or anticoagulant-related clots."],
+  refs: ["Kothari RU, Brott T, Broderick JP, et al. The ABCs of measuring intracerebral hemorrhage volumes. Stroke 1996;27:1304–1305.", "Bullock MR, et al. Surgical management of acute epidural hematomas. Neurosurgery 2006;58(3 Suppl):S7–S15.", "Greenberg SM, et al. 2022 guideline for the management of spontaneous intracerebral hemorrhage. Stroke 2022;53:e282–e361."]
+},
+{
+  id: "vasograde", abbr: "VASO", name: "VASOGRADE", cat: "Cerebrovascular",
+  desc: "Risk of delayed cerebral ischaemia after SAH", keywords: "vasograde dci delayed cerebral ischemia vasospasm sah wfns modified fisher",
+  intro: "Combines the WFNS grade and the modified Fisher scale on admission.",
+  items: [
+    { id: "w", label: "WFNS grade", compact: true, options: [opt(1, "1"), opt(2, "2"), opt(3, "3"), opt(4, "4"), opt(5, "5")] },
+    { id: "f", label: "Modified Fisher grade", compact: true, options: [opt(0, "0"), opt(1, "1"), opt(2, "2"), opt(3, "3"), opt(4, "4")] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["w", "f"]); if (n) return { complete: false, remaining: n };
+    if (a.w >= 4) return { complete: true, score: "Red", unit: "", level: "crit", label: "High risk of DCI", detail: "WFNS 4–5", summary: "VASOGRADE Red (WFNS " + a.w + ", mFisher " + a.f + ")" };
+    if (a.f >= 3 || a.w === 3) return { complete: true, score: "Yellow", unit: "", level: "warn", label: "Intermediate risk of DCI", detail: a.w === 3 && a.f < 3 ? "WFNS 3 with mFisher 0–2 is not defined in the original; treated as yellow" : "WFNS 1–3 with mFisher 3–4", summary: "VASOGRADE Yellow (WFNS " + a.w + ", mFisher " + a.f + ")" };
+    return { complete: true, score: "Green", unit: "", level: "ok", label: "Low risk of DCI", detail: "WFNS 1–2 with mFisher 0–2", summary: "VASOGRADE Green (WFNS " + a.w + ", mFisher " + a.f + ")" };
+  },
+  refs: ["de Oliveira Manoel AL, Jaja BN, Germans MR, et al. The VASOGRADE: a simple grading scale for prediction of delayed cerebral ischemia after subarachnoid hemorrhage. Stroke 2015;46:1826–1831."]
+},
+pickCalc({
+  id: "cognard", abbr: "COG", name: "Cognard classification (dural AV fistula)", cat: "Cerebrovascular",
+  desc: "Venous drainage pattern and risk of a dural arteriovenous fistula", keywords: "cognard dural arteriovenous fistula davf cortical venous reflux", intro: "Classify on catheter angiography.", unit: "Cognard",
+  items: [{ id: "t", label: "Venous drainage", options: [
+    P("I", "Type I", "Into a sinus with normal (antegrade) flow", "ok"),
+    P("IIa", "Type IIa", "Into a sinus with retrograde flow in the sinus only", "info"),
+    P("IIb", "Type IIb", "Into a sinus with reflux into cortical veins", "warn"),
+    P("IIa+b", "Type IIa+b", "Retrograde sinus flow and cortical venous reflux", "warn"),
+    P("III", "Type III", "Directly into cortical veins, without venous ectasia", "crit"),
+    P("IV", "Type IV", "Directly into cortical veins, with venous ectasia", "crit"),
+    P("V", "Type V", "Into spinal perimedullary veins (myelopathy)", "crit")] }],
+  notes: ["Cortical venous reflux (IIb and above) carries the risk of haemorrhage and venous infarction and usually needs treatment."],
+  refs: ["Cognard C, Gobin YP, Pierot L, et al. Cerebral dural arteriovenous fistulas: clinical and angiographic correlation with a revised classification of venous drainage. Radiology 1995;194:671–680."]
+}),
+pickCalc({
+  id: "borden", abbr: "BOR", name: "Borden classification (dural AV fistula)", cat: "Cerebrovascular",
+  desc: "Simpler three-type grading of dural AV fistulas", keywords: "borden dural arteriovenous fistula davf cortical venous drainage", intro: "Classify on catheter angiography.", unit: "Borden",
+  items: [{ id: "t", label: "Venous drainage", options: [
+    P("I", "Type I", "Into a dural sinus or meningeal vein, normal antegrade flow", "ok"),
+    P("II", "Type II", "Into a dural sinus with retrograde cortical venous drainage", "warn"),
+    P("III", "Type III", "Directly into cortical veins (no sinus drainage)", "crit")] }],
+  notes: ["Add 'a' (single hole) or 'b' (multiple fistulae) as subtypes. Types II and III have cortical venous drainage and a higher risk of bleeding."],
+  refs: ["Borden JA, Wu JK, Shucart WA. A proposed classification for spinal and cranial dural arteriovenous fistulous malformations and implications for treatment. J Neurosurg 1995;82:166–179."]
+}),
+pickCalc({
+  id: "zabramski", abbr: "ZAB", name: "Zabramski classification (cavernoma)", cat: "Cerebrovascular",
+  desc: "MRI types of cerebral cavernous malformation", keywords: "zabramski cavernoma cavernous malformation ccm mri hemosiderin", intro: "Classify on T1, T2 and gradient-echo or SWI.", unit: "type",
+  items: [{ id: "t", label: "MRI appearance", options: [
+    P("I", "Type I", "Subacute haemorrhage: bright on T1; bright or dark core on T2 with a dark rim", "warn"),
+    P("II", "Type II", "Mixed 'popcorn' core on T1 and T2 with a dark haemosiderin rim (classic cavernoma)", "info"),
+    P("III", "Type III", "Chronic resolved haemorrhage: iso- or hypointense on T1, dark on T2 with a dark rim that grows on GRE", "info"),
+    P("IV", "Type IV", "Tiny dark dots seen only on GRE or SWI (often familial)", "ok")] }],
+  notes: ["Type I lesions reflect recent bleeding and carry the highest short-term risk of rebleeding."],
+  refs: ["Zabramski JM, Wascher TM, Spetzler RF, et al. The natural history of familial cavernous malformations. J Neurosurg 1994;80:422–432."]
+}),
+pickCalc({
+  id: "raymond", abbr: "RROC", name: "Raymond–Roy occlusion classification", cat: "Cerebrovascular",
+  desc: "Occlusion of an aneurysm after coiling (modified)", keywords: "raymond roy occlusion aneurysm coiling endovascular residual neck mascitelli", intro: "Grade the angiogram after coiling.", unit: "class",
+  items: [{ id: "t", label: "Angiographic result", options: [
+    P("I", "Class I — Complete occlusion", "", "ok", "I", "Complete occlusion"),
+    P("II", "Class II — Residual neck", "", "info", "II", "Residual neck"),
+    P("IIIa", "Class IIIa — Residual aneurysm, contrast within the coils", "More likely to go on to occlude", "warn", "IIIa", "Residual aneurysm (within coils)"),
+    P("IIIb", "Class IIIb — Residual aneurysm, contrast along the aneurysm wall", "More likely to recanalise; plan follow-up or retreatment", "crit", "IIIb", "Residual aneurysm (along the wall)")] }],
+  refs: ["Roy D, Milot G, Raymond J. Endovascular treatment of unruptured aneurysms. Stroke 2001;32:1998–2004.", "Mascitelli JR, Moyle H, Oermann EK, et al. An update to the Raymond–Roy occlusion classification of intracranial aneurysms treated with coil embolization. J Neurointerv Surg 2015;7:496–502."]
+}),
+pickCalc({
+  id: "suzuki", abbr: "SUZ", name: "Suzuki stage (moyamoya)", cat: "Cerebrovascular",
+  desc: "Angiographic stage of moyamoya disease", keywords: "suzuki moyamoya stage angiography puff of smoke", intro: "Stage each side on catheter angiography.", unit: "stage",
+  items: [{ id: "t", label: "Angiographic appearance", options: [
+    P(1, "Stage 1", "Narrowing of the carotid fork (terminal ICA)", "info"),
+    P(2, "Stage 2", "Moyamoya vessels start to appear; main cerebral arteries dilated", "info"),
+    P(3, "Stage 3", "Moyamoya vessels increase; ACA and MCA fill poorly", "warn"),
+    P(4, "Stage 4", "Moyamoya vessels decrease; PCA also affected", "warn"),
+    P(5, "Stage 5", "Moyamoya vessels reduce further; main arteries disappear", "crit"),
+    P(6, "Stage 6", "Moyamoya vessels gone; supply only from the external carotid", "crit")] }],
+  refs: ["Suzuki J, Takaku A. Cerebrovascular 'moyamoya' disease: disease showing abnormal net-like vessels in base of brain. Arch Neurol 1969;20:288–299."]
+}),
+
+/* ---------- Spine ---------- */
+pickCalc({
+  id: "denis", abbr: "DEN", name: "Denis three-column classification", cat: "Spine trauma",
+  desc: "Thoracolumbar fracture type by the columns involved", keywords: "denis three column thoracolumbar fracture burst compression chance seat belt dislocation", intro: "Anterior column: front half of the body and disc. Middle: back half of the body and disc with the posterior longitudinal ligament. Posterior: the bony arch and ligaments behind it.", unit: "Denis",
+  items: [{ id: "t", label: "Injury", options: [
+    P("minor", "Minor injury", "Transverse process, spinous process, pars or isolated facet fracture", "ok", "Minor", "Stable minor injury", "Posterior elements only"),
+    P("comp", "Compression fracture", "Anterior column fails in compression; middle column intact", "ok", "Comp", "Compression: usually stable", "Anterior column"),
+    P("burst", "Burst fracture", "Anterior and middle columns fail in compression (posterior wall pushed into the canal)", "warn", "Burst", "Burst: potentially unstable", "Anterior and middle columns"),
+    P("fd", "Flexion–distraction (seat-belt, Chance)", "Posterior and middle columns fail in tension", "crit", "F-D", "Flexion–distraction: unstable", "Middle and posterior columns (tension)"),
+    P("disl", "Fracture–dislocation", "All three columns fail with translation or rotation", "crit", "F-Dx", "Fracture–dislocation: unstable", "All three columns")] }],
+  notes: ["Two or more failed columns suggest instability. Modern systems (TLICS, AO) also weigh neurology and posterior ligament injury."],
+  refs: ["Denis F. The three column spine and its significance in the classification of acute thoracolumbar spinal injuries. Spine 1983;8:817–831."]
+}),
+pickCalc({
+  id: "frankel", abbr: "FRK", name: "Frankel grade", cat: "Spine trauma",
+  desc: "Classic grading of spinal cord injury", keywords: "frankel spinal cord injury grade complete incomplete", intro: "Grade below the level of injury.", unit: "Frankel",
+  items: [{ id: "g", label: "Function below the injury", options: [
+    P("A", "A — Complete", "No motor or sensory function", "crit"),
+    P("B", "B — Sensory only", "Some sensation, no motor function", "crit"),
+    P("C", "C — Motor useless", "Some motor function, of no practical use", "warn"),
+    P("D", "D — Motor useful", "Useful motor function; may walk with or without aids", "info"),
+    P("E", "E — Normal", "Normal motor and sensory function (reflexes may be abnormal)", "ok")] }],
+  notes: ["Replaced by the ASIA Impairment Scale (AIS), which defines completeness by sacral sparing."],
+  refs: ["Frankel HL, Hancock DO, Hyslop G, et al. The value of postural reduction in the initial management of closed injuries of the spine with paraplegia and tetraplegia. Paraplegia 1969;7:179–192."]
+}),
+pickCalc({
+  id: "traynelis", abbr: "AOD", name: "Traynelis classification (atlanto-occipital dislocation)", cat: "Spine trauma",
+  desc: "Direction of occiput–C1 displacement", keywords: "traynelis atlanto-occipital dislocation aod craniocervical dissociation", intro: "Classify by the direction the occiput moves relative to C1.", unit: "type",
+  items: [{ id: "t", label: "Displacement", options: [
+    P("I", "Type I — Anterior", "Occiput displaced forward on the atlas (most common)", "crit"),
+    P("II", "Type II — Longitudinal", "Vertical distraction of the occiput from the atlas", "crit"),
+    P("III", "Type III — Posterior", "Occiput displaced backward on the atlas", "crit")] }],
+  notes: ["All types are highly unstable: avoid traction. Measure the basion–dens interval, Powers ratio and condyle–C1 interval on CT; the Harborview system grades stability."],
+  refs: ["Traynelis VC, Marano GD, Dunker RO, Kaufman HH. Traumatic atlanto-occipital dislocation. J Neurosurg 1986;65:863–870."]
+}),
+pickCalc({
+  id: "fielding", abbr: "AARS", name: "Fielding–Hawkins (atlantoaxial rotatory subluxation)", cat: "Spine trauma",
+  desc: "Rotatory C1–C2 fixation and the transverse ligament", keywords: "fielding hawkins atlantoaxial rotatory subluxation fixation torticollis grisel c1 c2", intro: "Classify on dynamic (rotation) CT.", unit: "type",
+  items: [{ id: "t", label: "Pattern", options: [
+    P("I", "Type I", "Rotatory fixation without anterior shift (ADI 3 mm or less); transverse ligament intact", "info"),
+    P("II", "Type II", "Rotation with anterior shift of 3–5 mm; transverse ligament deficient", "warn"),
+    P("III", "Type III", "Rotation with anterior shift over 5 mm; transverse and alar ligaments deficient", "crit"),
+    P("IV", "Type IV", "Rotation with posterior shift of C1 (deficient dens)", "crit")] }],
+  notes: ["Type I is the most common, especially in children after infection (Grisel syndrome) or minor trauma."],
+  refs: ["Fielding JW, Hawkins RJ. Atlanto-axial rotatory fixation. J Bone Joint Surg Am 1977;59:37–44."]
+}),
+{
+  id: "roussouly", abbr: "ROU", name: "Roussouly sagittal type", cat: "Spine: stability & deformity",
+  desc: "Shape of the lumbar lordosis from the sacral slope", keywords: "roussouly sagittal alignment lordosis sacral slope type", intro: "Measure the sacral slope on a standing lateral film.",
+  items: [
+    { id: "m", type: "numbers", label: "Sacral slope", fields: [{ id: "ss", label: "SS (°)" }] },
+    { id: "sh", label: "Shape of the lordosis", when: function (a) { var s = num(a, "ss"); return s !== null && s < 35; }, options: [
+      opt("t1", "Short lordosis with its apex low (L5) and a long thoracolumbar kyphosis"),
+      opt("t2", "Flat lordosis and flat thoracic spine (flat back)")] }
+  ],
+  compute: function (a) {
+    var s = num(a, "ss"); if (s === null) return { complete: false, remaining: 1 };
+    var t;
+    if (s < 35) { if (!a.sh) return { complete: false, remaining: 1 }; t = a.sh === "t1" ? 1 : 2; }
+    else t = s <= 45 ? 3 : 4;
+    var d = { 1: "Low sacral slope, short low lordosis, long thoracolumbar kyphosis", 2: "Low sacral slope, flat lordosis and flat back; disc degeneration more common", 3: "Sacral slope 35–45°, balanced lordosis with its apex near L4", 4: "Sacral slope over 45°, long marked lordosis; facet and isthmic stress more common" }[t];
+    return { complete: true, score: t, unit: "type", level: t === 3 ? "ok" : "info", label: "Roussouly type " + t, detail: d, summary: "Roussouly type " + t + " (SS " + s + "°)" };
+  },
+  notes: ["A 'type 3 with anteverted pelvis' (pelvic incidence under 50° with sacral slope over 35°) was added in 2018.", "Restore the patient's own type when planning fusion."],
+  refs: ["Roussouly P, Gollogly S, Berthonnaud E, Dimnet J. Classification of the normal variation in the sagittal alignment of the human lumbar spine and pelvis in the standing position. Spine 2005;30:346–353."]
+},
+pickCalc({
+  id: "mccormick", abbr: "McC", name: "McCormick grade (intramedullary tumours)", cat: "Spine: tumour",
+  desc: "Functional grade for spinal cord tumours", keywords: "mccormick intramedullary spinal cord tumour tumor ependymoma astrocytoma function grade", intro: "Grade before and after surgery.", unit: "grade",
+  items: [{ id: "g", label: "Function", options: [
+    P("I", "Grade I", "Neurologically normal or a mild deficit that does not affect function; normal gait", "ok"),
+    P("II", "Grade II", "Deficit affecting the limb, mild to moderate gait difficulty or disabling pain; walks independently", "info"),
+    P("III", "Grade III", "More severe deficit; needs a cane or brace, or significant impairment of both arms", "warn"),
+    P("IV", "Grade IV", "Severe deficit; needs a wheelchair, or a cane or brace with both arms impaired; usually dependent", "crit")] }],
+  notes: ["Preoperative grade is the strongest predictor of postoperative function: operate before patients lose independence."],
+  refs: ["McCormick PC, Torres R, Post KD, Stein BM. Intramedullary ependymoma of the spinal cord. J Neurosurg 1990;72:523–532."]
+}),
+{
+  id: "odi", abbr: "ODI", name: "Oswestry Disability Index (score only)", cat: "Spine: degenerative",
+  desc: "Adds up the 10 section scores of a completed ODI form", keywords: "oswestry odi low back pain disability questionnaire outcome",
+  intro: "Use the official licensed ODI form; enter each section's score (0–5) as marked by the patient, or N/A if the patient skipped it. The questionnaire text is not reproduced here.",
+  items: [scoreItem("s1", "1. Pain intensity", 5, true), scoreItem("s2", "2. Personal care", 5, true), scoreItem("s3", "3. Lifting", 5, true), scoreItem("s4", "4. Walking", 5, true),
+    scoreItem("s5", "5. Sitting", 5, true), scoreItem("s6", "6. Standing", 5, true), scoreItem("s7", "7. Sleeping", 5, true), scoreItem("s8", "8. Sex life", 5, true),
+    scoreItem("s9", "9. Social life", 5, true), scoreItem("s10", "10. Travelling", 5, true)],
+  compute: function (a) {
+    var ids = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10"], n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var done = ids.filter(function (k) { return a[k] !== "N/A"; });
+    if (done.length < 8) return { complete: true, score: "—", unit: "%", level: "info", label: "Too many sections skipped", detail: "Score needs at least 8 answered sections", summary: "ODI not scorable (" + done.length + " sections)" };
+    var sum = done.reduce(function (t, k) { return t + a[k]; }, 0), pct = Math.round(sum / (5 * done.length) * 100);
+    var b = pct <= 20 ? ["Minimal disability", "ok"] : pct <= 40 ? ["Moderate disability", "info"] : pct <= 60 ? ["Severe disability", "warn"] : pct <= 80 ? ["Crippling back pain", "crit"] : ["Bed-bound, or symptoms exaggerated", "crit"];
+    return { complete: true, score: pct, unit: "%", level: b[1], label: b[0], detail: sum + " of " + 5 * done.length + " points" + (done.length < 10 ? " (" + (10 - done.length) + " skipped)" : ""), summary: "ODI " + pct + "% — " + b[0].toLowerCase() };
+  },
+  notes: ["Score % = total ÷ (5 × answered sections) × 100.", "A change of about 10 points is often taken as clinically important.", "The ODI is copyrighted; obtain the form and licence from the copyright holder (Mapi Research Trust)."],
+  refs: ["Fairbank JC, Pynsent PB. The Oswestry Disability Index. Spine 2000;25:2940–2952."]
+},
+{
+  id: "ndi", abbr: "NDI", name: "Neck Disability Index (score only)", cat: "Spine: degenerative",
+  desc: "Adds up the 10 section scores of a completed NDI form", keywords: "neck disability index ndi vernon cervical pain outcome questionnaire",
+  intro: "Use the official NDI form; enter each section's score (0–5) as marked by the patient, or N/A if the patient skipped it. The questionnaire text is not reproduced here.",
+  items: [scoreItem("s1", "1. Pain intensity", 5, true), scoreItem("s2", "2. Personal care", 5, true), scoreItem("s3", "3. Lifting", 5, true), scoreItem("s4", "4. Reading", 5, true),
+    scoreItem("s5", "5. Headaches", 5, true), scoreItem("s6", "6. Concentration", 5, true), scoreItem("s7", "7. Work", 5, true), scoreItem("s8", "8. Driving", 5, true),
+    scoreItem("s9", "9. Sleeping", 5, true), scoreItem("s10", "10. Recreation", 5, true)],
+  compute: function (a) {
+    var ids = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10"], n = missing(a, ids);
+    if (n) return { complete: false, remaining: n };
+    var done = ids.filter(function (k) { return a[k] !== "N/A"; });
+    if (done.length < 8) return { complete: true, score: "—", unit: "of 50", level: "info", label: "Too many sections skipped", detail: "Score needs at least 8 answered sections", summary: "NDI not scorable (" + done.length + " sections)" };
+    var sum = done.reduce(function (t, k) { return t + a[k]; }, 0), raw = Math.round(sum * 10 / done.length * 10) / 10, pct = Math.round(raw * 2);
+    var b = raw <= 4 ? ["No disability", "ok"] : raw <= 14 ? ["Mild disability", "ok"] : raw <= 24 ? ["Moderate disability", "info"] : raw <= 34 ? ["Severe disability", "warn"] : ["Complete disability", "crit"];
+    return { complete: true, score: raw, unit: "of 50", level: b[1], label: b[0], detail: pct + "%" + (done.length < 10 ? " (" + (10 - done.length) + " skipped; scaled to 10 sections)" : ""), summary: "NDI " + raw + "/50 (" + pct + "%) — " + b[0].toLowerCase() };
+  },
+  notes: ["Bands on the raw score: 0–4 none, 5–14 mild, 15–24 moderate, 25–34 severe, 35 or more complete.", "A change of 5 points is the minimal clinically important difference.", "The NDI is copyrighted by its authors; use an authorised form."],
+  refs: ["Vernon H, Mior S. The Neck Disability Index: a study of reliability and validity. J Manipulative Physiol Ther 1991;14:409–415."]
+},
+
+/* ---------- Neuro-oncology & skull base ---------- */
+{
+  id: "hardy", abbr: "HW", name: "Hardy–Wilson classification (pituitary adenoma)", cat: "Neuro-oncology & skull base",
+  desc: "Sellar floor invasion and suprasellar or parasellar extension", keywords: "hardy wilson pituitary adenoma sella invasion suprasellar extension", intro: "Grade the sellar floor and the extension separately.",
+  items: [
+    { id: "g", label: "Sellar floor", options: [
+      opt(0, "Grade 0 — Normal sella"), opt(1, "Grade I — Sella normal in size, focal bulge of the floor"), opt(2, "Grade II — Enlarged sella, floor intact"),
+      opt(3, "Grade III — Localised destruction of the floor"), opt(4, "Grade IV — Diffuse destruction of the floor (sphenoid invasion)")] },
+    { id: "s", label: "Extension", options: [
+      opt("0", "None"), opt("A", "A — Into the suprasellar cistern"), opt("B", "B — Recesses of the third ventricle obliterated"),
+      opt("C", "C — Floor of the third ventricle grossly displaced (up to the foramen of Monro)"), opt("D", "D — Intradural extension into the frontal, temporal or posterior fossa"),
+      opt("E", "E — Into or beneath the cavernous sinus (extradural)")] }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["g", "s"]); if (n) return { complete: false, remaining: n };
+    var code = roman[a.g] + (a.s === "0" ? "" : " " + a.s), inv = a.g >= 3 || a.s === "E";
+    return { complete: true, score: code, unit: "Hardy", level: inv ? "warn" : "info", label: inv ? "Invasive features" : "No invasive features",
+      detail: "Grade " + roman[a.g] + ", extension " + (a.s === "0" ? "none" : a.s), summary: "Hardy–Wilson " + code };
+  },
+  notes: ["Use with the Knosp grade for cavernous sinus invasion."],
+  refs: ["Hardy J, Vezina JL. Transsphenoidal neurosurgery of intracranial neoplasm. Adv Neurol 1976;15:261–273.", "Wilson CB. A decade of pituitary microsurgery. J Neurosurg 1984;61:814–833."]
+},
+pickCalc({
+  id: "samii", abbr: "SAM", name: "Samii (Hannover) classification (vestibular schwannoma)", cat: "Neuro-oncology & skull base",
+  desc: "Size and extension of a vestibular schwannoma", keywords: "samii hannover vestibular schwannoma acoustic neuroma size extension", intro: "Classify on MRI.", unit: "Samii",
+  items: [{ id: "t", label: "Extension", options: [
+    P("T1", "T1", "Purely inside the internal auditory canal", "ok"),
+    P("T2", "T2", "Inside and outside the canal", "ok"),
+    P("T3a", "T3a", "Fills the cerebellopontine cistern", "info"),
+    P("T3b", "T3b", "Reaches the brainstem", "info"),
+    P("T4a", "T4a", "Compresses the brainstem", "warn"),
+    P("T4b", "T4b", "Severely displaces the brainstem and compresses the fourth ventricle", "crit")] }],
+  refs: ["Samii M, Matthies C. Management of 1000 vestibular schwannomas (acoustic neuromas): hearing function in 1000 tumor resections. Neurosurgery 1997;40:248–260."]
+}),
+{
+  id: "gardner-robertson", abbr: "GR", name: "Gardner–Robertson hearing class", cat: "Neuro-oncology & skull base",
+  desc: "Hearing grade from the audiogram (vestibular schwannoma)", keywords: "gardner robertson hearing class audiogram pure tone speech discrimination vestibular schwannoma serviceable",
+  intro: "Enter the pure-tone average and the speech discrimination score of the affected ear. The class is set by the worse of the two.",
+  items: [{ id: "m", type: "numbers", label: "Audiogram", fields: [{ id: "pta", label: "Pure-tone average (dB)" }, { id: "sds", label: "Speech discrimination (%)" }] }],
+  compute: function (a) {
+    var p = numAny(a, "pta"), s = numAny(a, "sds");
+    if (p === null || s === null) return { complete: false, remaining: (p === null ? 1 : 0) + (s === null ? 1 : 0) };
+    var cp = p <= 30 ? 1 : p <= 50 ? 2 : p <= 90 ? 3 : 4;
+    var cs = s >= 70 ? 1 : s >= 50 ? 2 : s >= 5 ? 3 : s >= 1 ? 4 : 5;
+    var c = Math.max(cp, cs), names = ["", "Good to excellent", "Serviceable", "Non-serviceable", "Poor", "None"];
+    return { complete: true, score: roman[c], unit: "GR", level: c <= 2 ? "ok" : c === 3 ? "warn" : "crit", label: names[c] + (c <= 2 ? " (useful hearing)" : ""),
+      detail: "PTA class " + roman[cp] + ", speech class " + roman[cs], summary: "Gardner–Robertson class " + roman[c] + " — " + names[c] };
+  },
+  notes: ["Class I: 0–30 dB and 70–100%. II: 31–50 dB and 50–69%. III: 51–90 dB and 5–49%. IV: over 90 dB and 1–4%. V: no hearing."],
+  refs: ["Gardner G, Robertson JH. Hearing preservation in unilateral acoustic neuroma surgery. Ann Otol Rhinol Laryngol 1988;97:55–66."]
+},
+
+/* ---------- Hydrocephalus ---------- */
+sumCalc({
+  id: "etvss", abbr: "ETVSS", name: "ETV Success Score", cat: "Hydrocephalus & subdural",
+  desc: "Chance that endoscopic third ventriculostomy works in a child", keywords: "etv success score endoscopic third ventriculostomy hydrocephalus child kulkarni",
+  intro: "For children with hydrocephalus being considered for ETV.", unit: "%", sumName: "ETVSS",
+  items: [
+    { id: "age", label: "Age", options: [opt("a1", "Under 1 month", 0), opt("a2", "1 to under 6 months", 10), opt("a3", "6 months to under 1 year", 30), opt("a4", "1 to under 10 years", 40), opt("a5", "10 years or older", 50)] },
+    { id: "et", label: "Cause of hydrocephalus", options: [opt("inf", "Post-infectious", 0), opt("mid", "Myelomeningocele, intraventricular haemorrhage or non-tectal tumour", 20), opt("best", "Aqueductal stenosis, tectal tumour or other", 30)] },
+    { id: "sh", label: "Previous shunt", options: [opt("yes", "Yes", 0), opt("no", "No", 10)] }
+  ],
+  bands: [[40, "Low chance of success", "crit", "Score ≈ estimated chance of ETV success at 6 months"], [70, "Moderate chance of success", "warn", "Score ≈ estimated chance of ETV success at 6 months"], [90, "High chance of success", "ok", "Score ≈ estimated chance of ETV success at 6 months"]],
+  refs: ["Kulkarni AV, Drake JM, Mallucci CL, et al. Endoscopic third ventriculostomy in the treatment of childhood hydrocephalus. J Pediatr 2009;155:254–259.", "Kulkarni AV, Drake JM, Kestle JR, et al. Predicting who will benefit from endoscopic third ventriculostomy compared with shunt insertion. Neurosurgery 2010;67:588–593."]
+}),
+
+/* ---------- Perioperative ---------- */
+{
+  id: "asa", abbr: "ASA", name: "ASA physical status", cat: "Perioperative",
+  desc: "Pre-operative physical status class", keywords: "asa physical status anaesthesia anesthesia preoperative risk class emergency",
+  intro: "Choose the class that fits best; add E for an emergency operation.",
+  items: [
+    { id: "c", label: "Class", options: [
+      opt(1, "ASA I — Normal healthy patient"),
+      opt(2, "ASA II — Mild systemic disease", null, "e.g. smoker, well-controlled diabetes or hypertension, BMI 30–40, pregnancy"),
+      opt(3, "ASA III — Severe systemic disease", null, "e.g. poorly controlled diabetes or hypertension, COPD, BMI 40 or more, dialysis, old MI or stroke (over 3 months)"),
+      opt(4, "ASA IV — Severe disease that is a constant threat to life", null, "e.g. MI, stroke or stent within 3 months, ongoing ischaemia, severe valve disease or low EF, sepsis"),
+      opt(5, "ASA V — Moribund; not expected to survive without the operation", null, "e.g. intracranial bleed with mass effect, massive trauma"),
+      opt(6, "ASA VI — Brain-dead organ donor")] },
+    { id: "e", label: "Emergency operation?", options: YES_NO }
+  ],
+  compute: function (a) {
+    var n = missing(a, ["c", "e"]); if (n) return { complete: false, remaining: n };
+    var code = roman[a.c] + (a.e === "yes" && a.c < 6 ? "E" : "");
+    var lv = a.c <= 2 ? "ok" : a.c === 3 ? "warn" : "crit";
+    return { complete: true, score: code, unit: "ASA", level: lv, label: ["", "Healthy", "Mild systemic disease", "Severe systemic disease", "Constant threat to life", "Moribund", "Organ donor"][a.c],
+      detail: a.e === "yes" ? "Emergency: delay would increase the threat to life or a body part" : "Elective or urgent", summary: "ASA " + code };
+  },
+  refs: ["American Society of Anesthesiologists. ASA Physical Status Classification System (last amended 2020)."]
+},
+{
+  id: "mfi5", abbr: "mFI-5", name: "Modified Frailty Index (mFI-5)", cat: "Perioperative",
+  desc: "Five-item frailty score before surgery", keywords: "mfi-5 frailty index modified surgery risk complications elderly",
+  intro: "One point for each condition present.",
+  items: [{ id: "f", type: "checks", label: "Conditions", checks: [
+    { id: "f1", label: "Diabetes treated with tablets or insulin" },
+    { id: "f2", label: "Hypertension needing medicines" },
+    { id: "f3", label: "COPD or recent pneumonia" },
+    { id: "f4", label: "Congestive heart failure within 30 days before surgery" },
+    { id: "f5", label: "Not independent in daily activities (partly or totally dependent)" }] }],
+  compute: function (a) {
+    var t = ["f1", "f2", "f3", "f4", "f5"].filter(function (k) { return a[k]; }).length;
+    var b = t === 0 ? ["Not frail", "ok"] : t === 1 ? ["Pre-frail", "info"] : ["Frail", t >= 3 ? "crit" : "warn"];
+    return { complete: true, score: t, unit: "of 5", level: b[1], label: b[0], detail: "Each point raises the risk of complications, readmission and death after neurosurgery and spine surgery", summary: "mFI-5 " + t + "/5 — " + b[0].toLowerCase() };
+  },
+  refs: ["Subramaniam S, Aalberg JJ, Soriano RP, Divino CM. New 5-factor modified frailty index using American College of Surgeons NSQIP data. J Am Coll Surg 2018;226:173–181."]
+},
+
+/* ---------- Functional, pain & nerve ---------- */
+pickCalc({
+  id: "sunderland", abbr: "SUN", name: "Seddon and Sunderland nerve injury grades", cat: "Functional, pain & nerve",
+  desc: "Degree of peripheral nerve injury and expected recovery", keywords: "sunderland seddon nerve injury neurapraxia axonotmesis neurotmesis peripheral nerve",
+  intro: "Grade from the history, examination, nerve studies and, if explored, operative findings.", unit: "grade",
+  items: [{ id: "g", label: "Injury", options: [
+    P("I", "Sunderland I — Neurapraxia (Seddon)", "Conduction block, axon intact; full recovery in days to months", "ok"),
+    P("II", "Sunderland II — Axonotmesis (Seddon)", "Axon cut, endoneurium intact; full recovery by regrowth (about 1 mm a day)", "info"),
+    P("III", "Sunderland III", "Endoneurium disrupted, perineurium intact; slow, incomplete recovery", "warn"),
+    P("IV", "Sunderland IV", "Only the epineurium intact (neuroma in continuity); needs surgery", "crit"),
+    P("V", "Sunderland V — Neurotmesis (Seddon)", "Nerve completely divided; needs surgical repair", "crit"),
+    P("VI", "Mackinnon VI — Mixed", "Different grades along or across the nerve", "warn")] }],
+  notes: ["No recovery 3 months after a closed injury suggests grade IV–V: consider exploration. Sharp open injuries are repaired early."],
+  refs: ["Seddon HJ. Three types of nerve injury. Brain 1943;66:237–288.", "Sunderland S. A classification of peripheral nerve injuries producing loss of function. Brain 1951;74:491–516.", "Mackinnon SE, Dellon AL. Surgery of the peripheral nerve. Thieme, 1988."]
+}),
+{
+  id: "bni-pain", abbr: "BNI", name: "BNI pain and numbness scores (trigeminal neuralgia)", cat: "Functional, pain & nerve",
+  desc: "Outcome after microvascular decompression, radiosurgery or rhizotomy", keywords: "bni barrow pain intensity numbness trigeminal neuralgia mvd radiosurgery outcome",
+  intro: "Grade pain and, if wanted, facial numbness at follow-up.",
+  items: [
+    { id: "p", label: "Pain", options: [
+      opt("I", "I — No pain, no medication"), opt("II", "II — Occasional pain, no medication needed"),
+      opt("IIIa", "IIIa — No pain, still taking medication"), opt("IIIb", "IIIb — Some pain, adequately controlled with medication"),
+      opt("IV", "IV — Some pain, not adequately controlled with medication"), opt("V", "V — Severe pain or no relief")] },
+    { id: "n", label: "Facial numbness", tag: "optional", optional: true, options: [
+      opt("I", "I — No numbness"), opt("II", "II — Mild, not bothersome"), opt("III", "III — Somewhat bothersome"), opt("IV", "IV — Very bothersome")] }
+  ],
+  compute: function (a) {
+    if (!a.p) return { complete: false, remaining: 1 };
+    var good = ["I", "II", "IIIa", "IIIb"].indexOf(a.p) !== -1;
+    var lv = a.p === "I" || a.p === "II" || a.p === "IIIa" ? "ok" : a.p === "IIIb" ? "info" : a.p === "IV" ? "warn" : "crit";
+    return { complete: true, score: a.p, unit: "BNI pain", level: lv, label: good ? "Good pain control" : "Treatment failure",
+      detail: a.n ? "Numbness grade " + a.n : "BNI I–IIIb is usually reported as success", summary: "BNI pain " + a.p + (a.n ? ", numbness " + a.n : "") };
+  },
+  refs: ["Rogers CL, Shetter AG, Fiedler JA, et al. Gamma knife radiosurgery for trigeminal neuralgia: the initial experience of the Barrow Neurological Institute. Int J Radiat Oncol Biol Phys 2000;47:1013–1019."]
+},
+pickCalc({
+  id: "engel", abbr: "ENG", name: "Engel outcome after epilepsy surgery", cat: "Functional, pain & nerve",
+  desc: "Seizure outcome classes I–IV", keywords: "engel epilepsy surgery outcome seizure free classification", intro: "Grade at follow-up (usually at least 1 year).", unit: "Engel",
+  items: [{ id: "c", label: "Outcome", options: [
+    P("IA", "IA — Completely seizure-free since surgery", "", "ok"),
+    P("IB", "IB — Non-disabling focal seizures only since surgery", "", "ok"),
+    P("IC", "IC — Some disabling seizures after surgery, but free of them for at least 2 years", "", "ok"),
+    P("ID", "ID — Generalised convulsions only when medicines are stopped", "", "ok"),
+    P("IIA", "IIA — Initially free of disabling seizures, now rare seizures", "", "info"),
+    P("IIB", "IIB — Rare disabling seizures since surgery", "", "info"),
+    P("IIC", "IIC — More than rare seizures after surgery, but rare for at least 2 years", "", "info"),
+    P("IID", "IID — Nocturnal seizures only", "", "info"),
+    P("IIIA", "IIIA — Worthwhile reduction in seizures", "", "warn"),
+    P("IIIB", "IIIB — Long seizure-free intervals (over half the follow-up, but under 2 years)", "", "warn"),
+    P("IVA", "IVA — Significant reduction, but not worthwhile", "", "crit"),
+    P("IVB", "IVB — No appreciable change", "", "crit"),
+    P("IVC", "IVC — Seizures worse", "", "crit")] }],
+  notes: ["Class I = free of disabling seizures; II = rare disabling seizures; III = worthwhile improvement; IV = no worthwhile improvement."],
+  refs: ["Engel J Jr, Van Ness PC, Rasmussen TB, Ojemann LM. Outcome with respect to epileptic seizures. In: Engel J Jr, ed. Surgical treatment of the epilepsies, 2nd ed. Raven Press, 1993:609–621."]
+}),
+pickCalc({
+  id: "ilae-outcome", abbr: "ILAE", name: "ILAE outcome after epilepsy surgery", cat: "Functional, pain & nerve",
+  desc: "Seizure outcome classes 1–6", keywords: "ilae epilepsy surgery outcome classification wieser seizure free aura", intro: "Grade each year after surgery.", unit: "ILAE",
+  items: [{ id: "c", label: "Outcome", options: [
+    P("1a", "Class 1a — Completely seizure-free since surgery, no auras", "", "ok"),
+    P("1", "Class 1 — Completely seizure-free, no auras (this year)", "", "ok"),
+    P("2", "Class 2 — Only auras, no other seizures", "", "ok"),
+    P("3", "Class 3 — 1 to 3 seizure days a year, with or without auras", "", "info"),
+    P("4", "Class 4 — 4 seizure days a year up to a 50% reduction from baseline", "", "warn"),
+    P("5", "Class 5 — Less than 50% reduction up to a 100% increase", "", "crit"),
+    P("6", "Class 6 — More than a 100% increase in seizure days", "", "crit")] }],
+  refs: ["Wieser HG, Blume WT, Fish D, et al. ILAE Commission Report. Proposal for a new classification of outcome with respect to epileptic seizures following epilepsy surgery. Epilepsia 2001;42:282–286."]
+}),
+
+/* ---------- Neurology ---------- */
+sumCalc({
+  id: "barthel", abbr: "BI", name: "Barthel Index", cat: "Stroke, TIA & SAH",
+  desc: "Independence in 10 activities of daily living", keywords: "barthel index adl activities daily living stroke rehabilitation function",
+  intro: "Score what the patient actually does, not what they could do.", unit: "of 100", outOf: 100, sumName: "Barthel Index",
+  items: [
+    { id: "feed", label: "Feeding", options: [opt(0, "Unable", 0), opt(5, "Needs help cutting or spreading, or a modified diet", 5), opt(10, "Independent", 10)] },
+    { id: "bath", label: "Bathing", options: [opt(0, "Dependent", 0), opt(5, "Independent", 5)] },
+    { id: "groom", label: "Grooming (face, hair, teeth, shaving)", options: [opt(0, "Needs help", 0), opt(5, "Independent", 5)] },
+    { id: "dress", label: "Dressing", options: [opt(0, "Dependent", 0), opt(5, "Needs help; does about half alone", 5), opt(10, "Independent, including buttons, zips and laces", 10)] },
+    { id: "bowel", label: "Bowels", options: [opt(0, "Incontinent or needs enemas", 0), opt(5, "Occasional accident", 5), opt(10, "Continent", 10)] },
+    { id: "blad", label: "Bladder", options: [opt(0, "Incontinent, or catheter not managed alone", 0), opt(5, "Occasional accident", 5), opt(10, "Continent", 10)] },
+    { id: "toil", label: "Toilet use", options: [opt(0, "Dependent", 0), opt(5, "Needs some help", 5), opt(10, "Independent (on and off, dressing, wiping)", 10)] },
+    { id: "trans", label: "Transfers (bed to chair and back)", options: [opt(0, "Unable; no sitting balance", 0), opt(5, "Major help (one or two people); can sit", 5), opt(10, "Minor help (verbal or physical)", 10), opt(15, "Independent", 15)] },
+    { id: "mob", label: "Mobility on level surfaces", options: [opt(0, "Immobile or under 50 m", 0), opt(5, "Wheelchair independent over 50 m", 5), opt(10, "Walks with help of one person over 50 m", 10), opt(15, "Independent over 50 m (may use an aid)", 15)] },
+    { id: "stairs", label: "Stairs", options: [opt(0, "Unable", 0), opt(5, "Needs help", 5), opt(10, "Independent", 10)] }
+  ],
+  bands: [[20, "Total dependence", "crit"], [60, "Severe dependence", "warn"], [90, "Moderate dependence", "info"], [99, "Slight dependence", "ok"], [100, "Independent", "ok"]],
+  notes: ["Copyright: Maryland State Medical Society; free for non-commercial use with citation of the original paper. Item wording here is summarised."],
+  refs: ["Mahoney FI, Barthel DW. Functional evaluation: the Barthel Index. Md State Med J 1965;14:61–65.", "Shah S, Vanclay F, Cooper B. Improving the sensitivity of the Barthel Index for stroke rehabilitation. J Clin Epidemiol 1989;42:703–709."]
+}),
+{
+  id: "moca", abbr: "MoCA", name: "MoCA total (score only)", cat: "Cognition",
+  desc: "Education adjustment and interpretation of a completed MoCA", keywords: "moca montreal cognitive assessment dementia mild cognitive impairment",
+  intro: "Give the test on the official form (training and certification are required by the copyright holder), then enter the total here.",
+  items: [
+    { id: "m", type: "numbers", label: "Total from the form", fields: [{ id: "t", label: "MoCA total (0–30)" }] },
+    { id: "ed", label: "12 years of education or less?", options: YES_NO }
+  ],
+  compute: function (a) {
+    var t = numAny(a, "t"), n = (t === null ? 1 : 0) + (a.ed ? 0 : 1);
+    if (n) return { complete: false, remaining: n };
+    if (t < 0 || t > 30) return { complete: true, score: "—", unit: "MoCA", level: "info", label: "Enter a total between 0 and 30", detail: "", summary: "MoCA: invalid total" };
+    var adj = a.ed === "yes" && t < 30 ? t + 1 : t;
+    var ok = adj >= 26;
+    return { complete: true, score: adj, unit: "of 30", level: ok ? "ok" : adj >= 18 ? "warn" : "crit", label: ok ? "Normal range (26 or more)" : "Below the normal cut-off",
+      detail: a.ed === "yes" && t < 30 ? "1 point added for education" : "No education adjustment", summary: "MoCA " + adj + "/30" + (ok ? " (normal range)" : " (below 26)") };
+  },
+  notes: ["The test items are copyrighted and not reproduced here.", "A low score is a reason for fuller assessment, not a diagnosis."],
+  refs: ["Nasreddine ZS, Phillips NA, Bédirian V, et al. The Montreal Cognitive Assessment, MoCA: a brief screening tool for mild cognitive impairment. J Am Geriatr Soc 2005;53:695–699."]
+},
+{
+  id: "mmse", abbr: "MMSE", name: "MMSE total (score only)", cat: "Cognition",
+  desc: "Interpretation of a completed MMSE total", keywords: "mmse mini mental state examination folstein dementia cognitive",
+  intro: "Use a licensed MMSE form, then enter the total here.",
+  items: [{ id: "m", type: "numbers", label: "Total from the form", fields: [{ id: "t", label: "MMSE total (0–30)" }] }],
+  compute: function (a) {
+    var t = numAny(a, "t"); if (t === null) return { complete: false, remaining: 1 };
+    if (t < 0 || t > 30) return { complete: true, score: "—", unit: "MMSE", level: "info", label: "Enter a total between 0 and 30", detail: "", summary: "MMSE: invalid total" };
+    var b = t >= 24 ? ["No cognitive impairment (24–30)", "ok"] : t >= 18 ? ["Mild cognitive impairment (18–23)", "warn"] : ["Severe cognitive impairment (0–17)", "crit"];
+    return { complete: true, score: t, unit: "of 30", level: b[1], label: b[0], detail: "Interpret with age and education", summary: "MMSE " + t + "/30 — " + b[0] };
+  },
+  notes: ["The MMSE is copyrighted (PAR Inc.); the items are not reproduced here.", "Less sensitive than the MoCA for mild impairment."],
+  refs: ["Folstein MF, Folstein SE, McHugh PR. 'Mini-mental state'. J Psychiatr Res 1975;12:189–198.", "Tombaugh TN, McIntyre NJ. The mini-mental state examination: a comprehensive review. J Am Geriatr Soc 1992;40:922–935."]
+}
+];
+
+CALCS = CALCS.concat(MORE).concat(SPINE).concat(ICU).concat(EXTRA);
 CALCS.forEach(function (c) {
   if (c.scale) c.items.forEach(function (i) { if (!i.options && !i.type) { i.options = c.scale; i.compact = true; } });
 });
 var FIELDS = [
-  { name: "Neurosurgery", cats: ["Head injury & coma", "Cerebrovascular", "Spine trauma", "Spine: stability & deformity", "Spine: degenerative", "Spine: tumour", "Neuro-oncology & skull base", "Hydrocephalus & subdural"] },
-  { name: "Neurology", cats: ["Stroke, TIA & SAH", "Neuromuscular", "Movement & tone", "Seizures & ICU"] },
+  { name: "Neurosurgery", cats: ["Head injury & coma", "Cerebrovascular", "Spine trauma", "Spine: stability & deformity", "Spine: degenerative", "Spine: tumour", "Neuro-oncology & skull base", "Hydrocephalus & subdural", "Functional, pain & nerve", "Perioperative"] },
+  { name: "Neurology", cats: ["Stroke, TIA & SAH", "Neuromuscular", "Movement & tone", "Seizures & ICU", "Cognition"] },
   { name: "Psychiatry", cats: ["Depression & anxiety", "Substance use", "Psychopharmacology"] },
   { name: "Neuro ICU", cats: ["ICP & osmotherapy", "Sodium & water", "Renal & fluids"] }
 ];
