@@ -6377,7 +6377,7 @@ var HEAD3D = {"mesh":[[[0.0,7.7,-8.5],[0.7,7.6,-8.5],[1.4,7.4,-8.5],[2.1,7.0,-8.
     if (!shown) html += '<p class="empty">No calculator matches “' + esc(query) + '”' + (field !== "All" ? ' in ' + esc(field) : '') + '.</p>';
     html += '<p class="foot">' + CALCS.length + ' scores. Each calculator lists its original references. Check results against your local protocols.</p>';
     html += '<p class="foot copy"><strong>© 2026 Dr. Mohammed Asfa.</strong> All rights reserved. The scores and classifications belong to their original authors and are cited in each calculator.</p>';
-    if (!q) html += '<p class="foot ver">Version ' + APP_VERSION + ' · <button type="button" class="linkbtn" id="upd">Check for updates</button></p>';
+    if (!q) html += '<p class="foot ver">Version ' + APP_VERSION + ' · <button type="button" class="linkbtn" id="upd">Check for updates</button> · <a href="privacy.html">Privacy policy</a></p>';
     app.innerHTML = html;
     document.getElementById("result") && document.getElementById("result").remove();
     var upd = document.getElementById("upd");

@@ -1,8 +1,8 @@
 /* NeuroSpine Calculator service worker: offline support.
    © 2026 Dr. Mohammed Asfa. All rights reserved.
    Change CACHE when you publish a new version so phones fetch the update. */
-var CACHE = "nss-v47";
-var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "fig-cord.webp", "fig-ventricles.webp", "fig-cord-syndromes.webp", "fig-herniation.webp", "fig-csf.webp", "fig-cs-skull.webp", "fig-access-r.webp", "fig-kocher.webp", "fig-evd.webp", "fig-lobes.webp", "fig-posterior.webp", "fig-roots-lumbar.webp", "fig-roots-cervical.webp", "fig-cs-axial-a.webp", "fig-cs-axial-b.webp", "fig-cs-sag-mid.webp", "fig-cs-sag-lat.webp", "fig-willis.webp", "fig-ica.webp"];
+var CACHE = "nss-v49";
+var CORE = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "fig-cord.webp", "fig-ventricles.webp", "fig-cord-syndromes.webp", "fig-herniation.webp", "fig-csf.webp", "fig-cs-skull.webp", "fig-access-r.webp", "fig-kocher.webp", "fig-evd.webp", "fig-lobes.webp", "fig-posterior.webp", "fig-roots-lumbar.webp", "fig-roots-cervical.webp", "fig-cs-axial-a.webp", "fig-cs-axial-b.webp", "fig-cs-sag-mid.webp", "fig-cs-sag-lat.webp", "fig-willis.webp", "fig-ica.webp", "privacy.html"];
 // The 3D models (fig-skull3d.json, fig-ventricles3d.json; about 0.8 MB) are not downloaded at install:
 // they are cached the first time the 3D skull page is opened (cache-first rule below) and then work offline.
 
@@ -26,7 +26,7 @@ self.addEventListener("activate", function (event) {
 // Handle only this app's own files. Other pages or apps published on the same GitHub site
 // (for example in a sub-folder) pass straight to the network, so they are never cached or replaced here.
 var SCOPE = new URL(self.registration.scope).pathname;
-var OWN = /^(index\.html|manifest\.json|fig-[\w.-]+\.(webp|json)|icon-[\w-]+\.png|apple-touch-icon\.png|screenshot-\d+\.png)$/;
+var OWN = /^(index\.html|privacy\.html|manifest\.json|fig-[\w.-]+\.(webp|json)|icon-[\w-]+\.png|apple-touch-icon\.png|screenshot-\d+\.png)$/;
 function ownFile(url) {
   if (url.origin !== self.location.origin || url.pathname.indexOf(SCOPE) !== 0) return null;
   var rest = url.pathname.slice(SCOPE.length);
@@ -54,7 +54,7 @@ self.addEventListener("fetch", function (event) {
 
   // On a slow or unstable connection do not keep the doctor waiting: if the network has not answered
   // within 3 s, open the saved copy and let the download finish in the background for next time.
-  if (req.mode === "navigate") {
+  if (req.mode === "navigate" && own !== "privacy.html") {
     if (own !== "index.html") return;
     var net = fetch(req.url, { cache: "no-store", credentials: "same-origin" }).then(function (res) {
       if (!res.ok) throw new Error("bad status");
